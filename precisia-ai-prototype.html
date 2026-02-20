@@ -1,0 +1,1929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Precisia AI – Customer Intent Prediction (Prototype)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0a0a0f;
+      --paper: #f5f3ee;
+      --accent: #ff4d2e;
+      --accent2: #0038ff;
+      --muted: #8a8880;
+      --card: #ffffff;
+      --border: #e0ddd7;
+      --high: #00c853;
+      --low: #ff6d00;
+      --sim: #ff4d2e;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+
+    .sim-banner { background: var(--sim); color: #fff; text-align: center; padding: 6px 16px; font-family: 'Syne', sans-serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; }
+
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; border-bottom: 1.5px solid var(--border); background: var(--paper); position: sticky; top: 0; z-index: 200; gap: 12px; flex-wrap: wrap; }
+    .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.5px; white-space: nowrap; }
+    .nav-logo span { color: var(--accent2); }
+    .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+    .tab-btn { padding: 7px 16px; border-radius: 100px; border: 1.5px solid transparent; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all 0.2s; white-space: nowrap; }
+    .tab-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .tab-btn:not(.active):hover { border-color: var(--ink); color: var(--ink); }
+    .nav-stats { display: flex; gap: 16px; align-items: center; font-size: 12px; }
+    .nav-stat { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+    .nav-stat strong { color: var(--ink); font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; }
+    .nav-intent-pill { background: var(--ink); color: #fff; padding: 5px 14px; border-radius: 100px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; white-space: nowrap; transition: background 0.3s; }
+    .nav-intent-pill.high { background: var(--high); }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── PAGE 1: FEATURED ── */
+    .shop-wrap { max-width: 1100px; margin: 0 auto; padding: 48px 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start; }
+    .product-visual { position: relative; background: #e8e5de; border-radius: 24px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .product-visual::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 60% 30%, rgba(0,56,255,0.08) 0%, transparent 70%); }
+    .headphone-svg { width: 65%; filter: drop-shadow(0 20px 40px rgba(0,0,0,0.15)); }
+    .sim-tag { position: absolute; top: 14px; left: 14px; background: var(--sim); color: #fff; font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 100px; font-weight: 700; }
+    .product-label { font-family: 'Syne', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .product-name { font-family: 'Syne', sans-serif; font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -1px; margin-bottom: 8px; }
+    .product-price { font-size: 26px; font-weight: 600; color: var(--accent2); margin-bottom: 6px; }
+    .product-price sub { font-size: 14px; font-weight: 400; }
+    .product-desc { color: var(--muted); font-size: 14px; line-height: 1.7; margin-bottom: 28px; max-width: 380px; }
+    .intent-box { background: var(--ink); color: #fff; border-radius: 16px; padding: 18px 22px; margin-bottom: 24px; }
+    .intent-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .intent-label-row span:first-child { font-family: 'Syne', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.6; }
+    .intent-pct { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; }
+    .meter-track { height: 6px; background: rgba(255,255,255,0.15); border-radius: 100px; overflow: hidden; }
+    .meter-fill { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 100px; width: 0%; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); }
+    .intent-note { margin-top: 6px; font-size: 11px; opacity: 0.5; }
+    .btn-group { display: flex; flex-direction: column; gap: 10px; }
+    .action-btn { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: var(--ink); text-align: left; transition: all 0.18s; }
+    .action-btn:hover { border-color: var(--ink); transform: translateX(4px); }
+    .action-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .action-btn.primary:hover { background: #222; }
+    .btn-badge { font-size: 10px; font-family: 'Syne', sans-serif; letter-spacing: 1px; padding: 3px 8px; border-radius: 100px; background: var(--accent2); color: #fff; white-space: nowrap; }
+    .action-btn.primary .btn-badge { background: rgba(255,255,255,0.2); }
+    .score-events { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+    .events-title { font-family: 'Syne', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .event-log { display: flex; flex-direction: column; gap: 5px; }
+    .event-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); opacity: 0; transform: translateX(-8px); transition: all 0.3s; }
+    .event-item.show { opacity: 1; transform: translateX(0); }
+    .event-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); flex-shrink: 0; }
+    .view-catalog-btn { margin-top: 28px; width: 100%; padding: 15px; background: linear-gradient(135deg, var(--accent2), #0055ff); color: #fff; border: none; border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: opacity 0.2s, transform 0.2s; }
+    .view-catalog-btn:hover { opacity: 0.88; transform: translateY(-2px); }
+
+    /* ── PAGE 2: CATALOG ── */
+    .catalog-wrap { max-width: 1300px; margin: 0 auto; padding: 40px 32px; }
+    .catalog-title { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-bottom: 4px; }
+    .catalog-title span { color: var(--accent2); }
+    .catalog-sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+    .sim-disclaimer { background: #fff8e1; border: 1.5px solid #ffe082; border-radius: 12px; padding: 14px 18px; font-size: 13px; color: #795548; margin-bottom: 24px; line-height: 1.6; }
+    .sim-disclaimer strong { color: #e65100; }
+    .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .stat-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 16px; padding: 18px 20px; }
+    .stat-label { font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    .stat-val { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; }
+    .catalog-controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 24px; }
+    .filter-btn { padding: 7px 15px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--card); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; color: var(--muted); transition: all 0.18s; }
+    .filter-btn.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .filter-btn:hover:not(.active) { border-color: var(--ink); color: var(--ink); }
+    .catalog-search { padding: 8px 16px; border-radius: 100px; border: 1.5px solid var(--border); background: var(--card); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink); outline: none; width: 210px; transition: border-color 0.2s; }
+    .catalog-search:focus { border-color: var(--accent2); }
+    .catalog-count { margin-left: auto; font-size: 13px; color: var(--muted); font-family: 'Syne', sans-serif; font-weight: 600; }
+    .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(225px, 1fr)); gap: 16px; }
+    .prod-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 18px; overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; display: flex; flex-direction: column; }
+    .prod-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,0.09); transform: translateY(-3px); }
+    .prod-img { position: relative; height: 155px; display: flex; align-items: center; justify-content: center; font-size: 50px; }
+    .prod-cat-badge { position: absolute; top: 10px; left: 10px; font-family: 'Syne', sans-serif; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 9px; border-radius: 100px; color: #fff; font-weight: 700; }
+    .prod-id-badge { position: absolute; bottom: 10px; right: 10px; font-family: 'Syne', sans-serif; font-size: 8px; letter-spacing: 0.5px; padding: 2px 7px; border-radius: 100px; color: #fff; font-weight: 700; background: rgba(0,0,0,0.3); }
+    .in-cart-badge { display: none; position: absolute; top: 10px; right: 10px; background: var(--high); color: #fff; font-family: 'Syne', sans-serif; font-size: 8px; letter-spacing: 1px; padding: 3px 8px; border-radius: 100px; font-weight: 700; }
+    .in-cart-badge.show { display: block; }
+    .prod-body { padding: 14px 16px 16px; flex: 1; display: flex; flex-direction: column; }
+    .prod-name { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; margin-bottom: 5px; line-height: 1.3; }
+    .prod-desc { font-size: 11.5px; color: var(--muted); line-height: 1.55; flex: 1; margin-bottom: 12px; }
+    .prod-price { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800; color: var(--accent2); margin-bottom: 10px; }
+    .prod-actions { display: flex; gap: 7px; }
+    .prod-btn { flex: 1; padding: 9px 5px; border-radius: 9px; border: 1.5px solid var(--border); background: transparent; font-family: 'DM Sans', sans-serif; font-size: 11.5px; font-weight: 500; cursor: pointer; color: var(--ink); transition: all 0.15s; text-align: center; }
+    .prod-btn:hover { border-color: var(--ink); }
+    .prod-btn.cart { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .prod-btn.cart:hover { background: #222; }
+    .prod-btn.cart.added { background: var(--high); border-color: var(--high); }
+    .no-results { text-align: center; padding: 80px 20px; color: var(--muted); font-size: 16px; }
+
+    /* ── CART ── */
+    .cart-fab { position: fixed; bottom: 28px; right: 28px; background: var(--ink); color: #fff; border: none; border-radius: 100px; padding: 13px 22px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 24px rgba(0,0,0,0.18); z-index: 300; transition: transform 0.2s, background 0.3s; display: flex; align-items: center; gap: 8px; }
+    .cart-fab:hover { transform: scale(1.05); }
+    .cart-fab.high { background: var(--high); }
+    .cart-bubble { background: var(--accent); color: #fff; border-radius: 100px; font-size: 11px; padding: 2px 7px; min-width: 20px; text-align: center; }
+    .cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.18); z-index: 390; display: none; }
+    .cart-overlay.open { display: block; }
+    .cart-panel { position: fixed; right: 0; top: 0; height: 100vh; width: 360px; background: var(--card); border-left: 1.5px solid var(--border); z-index: 400; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); display: flex; flex-direction: column; box-shadow: -8px 0 40px rgba(0,0,0,0.08); }
+    .cart-panel.open { transform: translateX(0); }
+    .cart-header { padding: 22px 24px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .cart-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; }
+    .cart-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--muted); line-height: 1; }
+    .cart-items { flex: 1; overflow-y: auto; padding: 14px 24px; }
+    .cart-empty { color: var(--muted); font-size: 14px; text-align: center; padding: 60px 0; }
+    .cart-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .cart-item-emoji { font-size: 26px; width: 44px; height: 44px; background: var(--paper); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; line-height: 1.3; }
+    .cart-item-price { font-size: 12px; color: var(--accent2); font-weight: 700; font-family: 'Syne', sans-serif; }
+    .cart-item-cat { font-size: 10px; color: var(--muted); margin-bottom: 2px; }
+    .cart-footer { padding: 16px 24px; border-top: 1px solid var(--border); }
+    .cart-sim-note { font-size: 11px; color: var(--muted); margin-bottom: 10px; text-align: center; font-style: italic; }
+    .cart-total { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .cart-total span:first-child { font-size: 14px; font-weight: 600; }
+    .cart-total span:last-child { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; color: var(--accent2); }
+    .cart-checkout-btn { width: 100%; padding: 14px; background: var(--ink); color: #fff; border: none; border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 1px; }
+
+    /* ── PAGE 3: DASHBOARD ── */
+    .dash-wrap { max-width: 920px; margin: 0 auto; padding: 48px 32px; }
+    .dash-eyebrow { font-family: 'Syne', sans-serif; font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .dash-title { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 36px; }
+    .dash-title span { color: var(--accent2); }
+    .cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+    .card { background: var(--card); border: 1.5px solid var(--border); border-radius: 18px; padding: 22px; }
+    .card-label { font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .card-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; }
+    .card-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .card.score-card { grid-column: span 2; }
+    .dash-meter-track { height: 12px; background: #eee; border-radius: 100px; overflow: hidden; margin: 12px 0 6px; }
+    .dash-meter-fill { height: 100%; border-radius: 100px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .threshold-label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+    .verdict-card { border-radius: 18px; padding: 28px; margin-bottom: 18px; display: flex; align-items: center; gap: 22px; border: 2px solid var(--border); background: #f5f3ee; transition: all 0.4s; }
+    .verdict-card.high { background: #e8faf0; border-color: var(--high); }
+    .verdict-card.low { background: #fff3e8; border-color: var(--low); }
+    .verdict-icon { font-size: 42px; flex-shrink: 0; }
+    .verdict-title { font-family: 'Syne', sans-serif; font-size: 19px; font-weight: 800; margin-bottom: 5px; }
+    .verdict-card.high .verdict-title { color: #00703a; }
+    .verdict-card.low .verdict-title { color: #c44700; }
+    .verdict-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+    .breakdown-card { margin-bottom: 18px; }
+    .breakdown-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .breakdown-row:last-child { border-bottom: none; }
+    .br-action { font-weight: 500; }
+    .br-count { color: var(--muted); }
+    .br-points { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--accent2); }
+    .top-prod-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .top-prod-row:last-child { border-bottom: none; }
+    .top-prod-emoji { font-size: 22px; width: 38px; height: 38px; background: var(--paper); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .top-prod-name { flex: 1; font-weight: 500; }
+    .top-prod-actions { font-size: 11px; color: var(--muted); }
+    .top-prod-pts { font-family: 'Syne', sans-serif; font-weight: 700; color: var(--accent2); font-size: 12px; }
+    .privacy-card { background: #f0f0f0; border-radius: 14px; padding: 20px 22px; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 0; }
+    .privacy-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+    .privacy-title { font-family: 'Syne', sans-serif; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; margin-bottom: 5px; }
+    .privacy-text { font-size: 12px; color: var(--muted); line-height: 1.6; }
+    .reset-btn { margin-top: 22px; padding: 11px 22px; border-radius: 100px; border: 1.5px solid var(--border); background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+    .reset-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+    /* ── EXPORT SECTION ── */
+    .export-section { margin-top: 28px; background: var(--card); border: 2px solid var(--accent2); border-radius: 20px; padding: 28px; }
+    .export-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
+    .export-title-block {}
+    .export-eyebrow { font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent2); margin-bottom: 6px; font-weight: 700; }
+    .export-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+    .export-subtitle { font-size: 13px; color: var(--muted); line-height: 1.5; max-width: 480px; }
+    .export-btn { display: flex; align-items: center; gap: 8px; padding: 13px 24px; background: var(--accent2); color: #fff; border: none; border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; letter-spacing: 0.5px; white-space: nowrap; transition: opacity 0.2s, transform 0.2s; flex-shrink: 0; }
+    .export-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .export-btn:disabled { background: var(--muted); cursor: not-allowed; transform: none; opacity: 0.7; }
+    .export-btn.success { background: var(--high); }
+    .export-safety-note { background: #f0f7ff; border: 1.5px solid #bbdefb; border-radius: 12px; padding: 13px 16px; font-size: 12.5px; color: #1565c0; line-height: 1.6; margin-bottom: 16px; }
+    .export-safety-note strong { font-weight: 700; }
+    .export-preview { background: var(--paper); border-radius: 12px; padding: 16px; overflow-x: auto; }
+    .export-preview-label { font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-weight: 700; }
+    .export-table { width: 100%; border-collapse: collapse; font-size: 11.5px; min-width: 640px; }
+    .export-table th { font-family: 'Syne', sans-serif; font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 6px 10px; text-align: left; border-bottom: 1.5px solid var(--border); white-space: nowrap; }
+    .export-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); color: var(--ink); vertical-align: middle; }
+    .export-table tr:last-child td { border-bottom: none; }
+    .export-table .high-badge { background: #e8faf0; color: #00703a; font-family: 'Syne', sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 8px; border-radius: 100px; white-space: nowrap; }
+    .export-table .action-badge { background: #e8eeff; color: var(--accent2); font-family: 'Syne', sans-serif; font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 100px; white-space: nowrap; }
+    .export-locked { text-align: center; padding: 32px 20px; color: var(--muted); }
+    .export-locked-icon { font-size: 36px; margin-bottom: 10px; }
+    .export-locked-msg { font-size: 13px; line-height: 1.6; }
+
+    /* ── PRODUCT BROWSER OVERLAY ── */
+    .browser-overlay { position: fixed; inset: 0; z-index: 500; display: flex; flex-direction: column; background: #0c0c14; opacity: 0; pointer-events: none; transition: opacity 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .browser-overlay.open { opacity: 1; pointer-events: all; }
+
+    /* Browser chrome bar */
+    .browser-chrome { background: #1a1a2e; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 10px 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .browser-dots { display: flex; gap: 6px; flex-shrink: 0; }
+    .browser-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .browser-dot.red { background: #ff5f57; cursor: pointer; }
+    .browser-dot.red:hover { background: #ff3b30; }
+    .browser-dot.yellow { background: #ffbd2e; }
+    .browser-dot.green { background: #28c840; }
+    .browser-urlbar { flex: 1; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 7px 14px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .browser-lock { font-size: 11px; opacity: 0.4; flex-shrink: 0; }
+    .browser-url-text { font-size: 13px; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'DM Sans', sans-serif; }
+    .browser-url-text span { color: rgba(255,255,255,0.9); }
+    .browser-close-btn { background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.5); border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.18s; flex-shrink: 0; }
+    .browser-close-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+    /* Browser body */
+    .browser-body { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; }
+
+    /* Store hero */
+    .browser-store-hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); padding: 36px 40px 28px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .browser-store-name { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #fff; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .browser-store-name span { color: #818cf8; }
+    .browser-store-tagline { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 20px; }
+
+    /* Search bar */
+    .browser-search-row { display: flex; gap: 10px; align-items: center; }
+    .browser-search-wrap { flex: 1; position: relative; }
+    .browser-search-input { width: 100%; background: #fff; border: none; border-radius: 12px; padding: 14px 20px 14px 46px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); outline: none; box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+    .browser-search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
+    .browser-search-clear { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 16px; cursor: pointer; color: var(--muted); display: none; }
+    .browser-search-clear.show { display: block; }
+    .browser-search-btn { background: #818cf8; color: #fff; border: none; border-radius: 12px; padding: 14px 22px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.18s; }
+    .browser-search-btn:hover { background: #6366f1; }
+
+    /* Quick search chips */
+    .browser-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+    .browser-chip { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 100px; padding: 5px 14px; font-size: 12px; color: rgba(255,255,255,0.65); cursor: pointer; transition: all 0.18s; font-family: 'DM Sans', sans-serif; }
+    .browser-chip:hover { background: rgba(129,140,248,0.25); border-color: #818cf8; color: #c7d2fe; }
+
+    /* Results area */
+    .browser-results-area { padding: 28px 40px 40px; }
+    .browser-results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .browser-results-count { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.5); }
+    .browser-sort { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 6px 12px; font-family: 'DM Sans', sans-serif; font-size: 12px; color: rgba(255,255,255,0.6); cursor: pointer; }
+
+    /* Category pills row */
+    .browser-cat-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .browser-cat-pill { padding: 6px 14px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); font-size: 12px; color: rgba(255,255,255,0.55); cursor: pointer; transition: all 0.18s; }
+    .browser-cat-pill.active { background: #818cf8; border-color: #818cf8; color: #fff; }
+    .browser-cat-pill:hover:not(.active) { background: rgba(129,140,248,0.15); border-color: rgba(129,140,248,0.4); color: #c7d2fe; }
+
+    /* Product grid inside browser */
+    .browser-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+    .browser-prod-card { background: #1e1e32; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s; }
+    .browser-prod-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.4); border-color: rgba(129,140,248,0.4); }
+    .browser-prod-img { height: 130px; display: flex; align-items: center; justify-content: center; font-size: 48px; position: relative; }
+    .browser-prod-cat { position: absolute; top: 8px; left: 8px; font-family: 'Syne', sans-serif; font-size: 7px; letter-spacing: 1px; text-transform: uppercase; padding: 3px 8px; border-radius: 100px; color: #fff; font-weight: 700; }
+    .browser-prod-body { padding: 12px 14px 14px; }
+    .browser-prod-name { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: #e2e8ff; margin-bottom: 4px; line-height: 1.3; }
+    .browser-prod-desc { font-size: 11px; color: rgba(255,255,255,0.35); line-height: 1.5; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .browser-prod-footer { display: flex; align-items: center; justify-content: space-between; }
+    .browser-prod-price { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800; color: #818cf8; }
+    .browser-prod-btn { background: rgba(129,140,248,0.15); border: 1px solid rgba(129,140,248,0.3); border-radius: 8px; padding: 5px 10px; font-size: 11px; color: #c7d2fe; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+    .browser-prod-btn:hover { background: #818cf8; color: #fff; border-color: #818cf8; }
+    .browser-no-results { text-align: center; padding: 80px 20px; color: rgba(255,255,255,0.25); }
+    .browser-no-results-icon { font-size: 48px; margin-bottom: 12px; }
+    .browser-no-results-text { font-size: 15px; }
+
+    /* Fullscreen product modal inside browser */
+    .browser-modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 10; display: none; align-items: flex-start; justify-content: center; padding: 20px; overflow-y: auto; }
+    .browser-modal-overlay.open { display: flex; }
+    .browser-modal { background: #12121f; border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; width: 100%; max-width: 900px; overflow: hidden; animation: slideUpModal 0.3s cubic-bezier(0.4,0,0.2,1); }
+    @keyframes slideUpModal { from { transform: translateY(30px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+    .bm-top { display: flex; align-items: center; justify-content: space-between; padding: 18px 24px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .bm-breadcrumb { font-size: 12px; color: rgba(255,255,255,0.35); font-family: 'DM Sans', sans-serif; }
+    .bm-breadcrumb span { color: #818cf8; }
+    .bm-close { background: rgba(255,255,255,0.08); border: none; color: rgba(255,255,255,0.5); border-radius: 8px; width: 32px; height: 32px; font-size: 16px; cursor: pointer; transition: all 0.18s; }
+    .bm-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
+    .bm-body { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .bm-left { padding: 32px; border-right: 1px solid rgba(255,255,255,0.07); }
+    .bm-img { background: rgba(255,255,255,0.04); border-radius: 20px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 100px; margin-bottom: 16px; position: relative; border: 1px solid rgba(255,255,255,0.06); }
+    .bm-sim-label { position: absolute; top: 12px; left: 12px; background: var(--sim); color: #fff; font-family: 'Syne', sans-serif; font-size: 8px; letter-spacing: 1.5px; text-transform: uppercase; padding: 3px 9px; border-radius: 100px; font-weight: 700; }
+    .bm-thumbs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .bm-thumb { aspect-ratio: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; transition: border-color 0.15s; }
+    .bm-thumb:hover, .bm-thumb.active { border-color: #818cf8; background: rgba(129,140,248,0.1); }
+    .bm-right { padding: 32px; overflow-y: auto; max-height: 80vh; }
+    .bm-cat-pill { display: inline-block; font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 12px; border-radius: 100px; color: #fff; font-weight: 700; margin-bottom: 12px; }
+    .bm-name { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: #e2e8ff; letter-spacing: -0.5px; line-height: 1.2; margin-bottom: 10px; }
+    .bm-rating { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 12px; color: rgba(255,255,255,0.4); }
+    .bm-stars { color: #fbbf24; }
+    .bm-price-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+    .bm-price { font-family: 'Syne', sans-serif; font-size: 30px; font-weight: 800; color: #818cf8; }
+    .bm-mrp { font-size: 14px; color: rgba(255,255,255,0.3); text-decoration: line-through; }
+    .bm-discount { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; color: #34d399; background: rgba(52,211,153,0.1); padding: 3px 10px; border-radius: 100px; }
+    .bm-tax { font-size: 11px; color: rgba(255,255,255,0.25); margin-bottom: 18px; }
+    .bm-desc { font-size: 13px; color: rgba(255,255,255,0.55); line-height: 1.7; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .bm-section-title { font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 12px; font-weight: 700; }
+    .bm-specs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .bm-spec { background: rgba(255,255,255,0.04); border-radius: 10px; padding: 10px 12px; }
+    .bm-spec-k { font-family: 'Syne', sans-serif; font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 3px; }
+    .bm-spec-v { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.8); }
+    .bm-usage { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+    .bm-usage-item { display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: rgba(255,255,255,0.45); line-height: 1.55; margin-bottom: 8px; }
+    .bm-usage-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .bm-reviews { margin-bottom: 24px; }
+    .bm-review { background: rgba(255,255,255,0.04); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; }
+    .bm-review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .bm-review-name { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.7); }
+    .bm-review-stars { color: #fbbf24; font-size: 11px; }
+    .bm-review-text { font-size: 12px; color: rgba(255,255,255,0.4); line-height: 1.55; }
+    .bm-review-loc { font-size: 10px; color: rgba(255,255,255,0.2); margin-top: 4px; }
+    .bm-cta { display: flex; gap: 10px; position: sticky; bottom: 0; background: #12121f; padding: 16px 0 0; border-top: 1px solid rgba(255,255,255,0.07); margin-top: 8px; }
+    .bm-cart-btn { flex: 1; padding: 14px; background: #818cf8; color: #fff; border: none; border-radius: 12px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; transition: background 0.18s; letter-spacing: 0.5px; }
+    .bm-cart-btn:hover { background: #6366f1; }
+    .bm-cart-btn.added { background: #059669; }
+    .bm-view-full-btn { padding: 14px 18px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; font-family: 'DM Sans', sans-serif; font-size: 12px; color: rgba(255,255,255,0.6); cursor: pointer; transition: all 0.18s; white-space: nowrap; }
+    .bm-view-full-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+    .bm-intent-bar { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+    .bm-intent-label { font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: rgba(255,255,255,0.3); }
+    .bm-intent-val { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #818cf8; }
+
+    @media (max-width: 768px) {
+      .bm-body { grid-template-columns: 1fr; }
+      .bm-left { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.07); padding: 20px; }
+      .bm-right { padding: 20px; max-height: none; }
+      .browser-results-area, .browser-store-hero { padding-left: 18px; padding-right: 18px; }
+      .browser-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    }
+    .detail-wrap { max-width: 1100px; margin: 0 auto; padding: 36px 32px 60px; }
+    .detail-back { display: inline-flex; align-items: center; gap: 8px; background: none; border: 1.5px solid var(--border); border-radius: 100px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--muted); cursor: pointer; margin-bottom: 32px; transition: all 0.18s; }
+    .detail-back:hover { border-color: var(--ink); color: var(--ink); }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 52px; align-items: start; }
+    .detail-gallery { position: sticky; top: 80px; }
+    .detail-img-main { background: linear-gradient(135deg, #eceae3, #e2dfd8); border-radius: 24px; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 110px; position: relative; overflow: hidden; margin-bottom: 12px; }
+    .detail-img-main::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 35% 25%, rgba(0,56,255,0.07), transparent 60%); }
+    .detail-sim-tag { position: absolute; top: 16px; left: 16px; background: var(--sim); color: #fff; font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 100px; font-weight: 700; }
+    .detail-img-thumbs { display: flex; gap: 8px; }
+    .detail-thumb { flex: 1; aspect-ratio: 1; background: var(--paper); border: 1.5px solid var(--border); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; cursor: pointer; transition: border-color 0.18s; }
+    .detail-thumb:hover, .detail-thumb.active { border-color: var(--accent2); background: #e8eeff; }
+
+    .detail-info {}
+    .detail-cat-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .detail-cat-pill { font-family: 'Syne', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 12px; border-radius: 100px; color: #fff; font-weight: 700; }
+    .detail-id { font-family: 'Syne', sans-serif; font-size: 10px; letter-spacing: 1px; color: var(--muted); }
+    .detail-name { font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800; letter-spacing: -1px; line-height: 1.1; margin-bottom: 10px; }
+    .detail-rating { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; font-size: 13px; color: var(--muted); }
+    .detail-stars { color: #f59e0b; letter-spacing: 1px; font-size: 14px; }
+    .detail-price-row { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+    .detail-price { font-family: 'Syne', sans-serif; font-size: 34px; font-weight: 800; color: var(--accent2); }
+    .detail-mrp { font-size: 16px; color: var(--muted); text-decoration: line-through; }
+    .detail-discount { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; color: var(--high); background: #e8faf0; padding: 3px 10px; border-radius: 100px; }
+    .detail-tax-note { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+    .detail-desc { font-size: 14px; color: var(--ink); line-height: 1.75; margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+
+    .detail-specs { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .detail-specs-title { font-family: 'Syne', sans-serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
+    .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .spec-item { background: var(--paper); border-radius: 10px; padding: 12px 14px; }
+    .spec-key { font-family: 'Syne', sans-serif; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .spec-val { font-size: 13px; font-weight: 600; color: var(--ink); }
+
+    .detail-usage { margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .detail-usage-title { font-family: 'Syne', sans-serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
+    .usage-list { display: flex; flex-direction: column; gap: 10px; }
+    .usage-item { display: flex; align-items: flex-start; gap: 12px; font-size: 13px; line-height: 1.55; color: var(--ink); }
+    .usage-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .detail-reviews { margin-bottom: 28px; }
+    .detail-reviews-title { font-family: 'Syne', sans-serif; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; font-weight: 700; }
+    .review-card { background: var(--paper); border-radius: 14px; padding: 16px 18px; margin-bottom: 10px; }
+    .review-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+    .review-name { font-size: 13px; font-weight: 600; }
+    .review-stars { color: #f59e0b; font-size: 12px; }
+    .review-text { font-size: 13px; color: var(--muted); line-height: 1.55; }
+    .review-location { font-size: 11px; color: var(--muted); margin-top: 5px; opacity: 0.7; }
+
+    .detail-cta { display: flex; gap: 12px; }
+    .detail-cart-btn { flex: 1; padding: 16px; background: var(--ink); color: #fff; border: none; border-radius: 14px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.18s, transform 0.18s; letter-spacing: 0.5px; }
+    .detail-cart-btn:hover { background: #222; transform: translateY(-2px); }
+    .detail-cart-btn.added { background: var(--high); }
+    .detail-wish-btn { padding: 16px 20px; background: transparent; border: 1.5px solid var(--border); border-radius: 14px; font-size: 20px; cursor: pointer; transition: all 0.18s; }
+    .detail-wish-btn:hover { border-color: var(--accent); background: #fff5f3; }
+    .detail-intent-mini { background: var(--ink); color: #fff; border-radius: 12px; padding: 14px 18px; margin-top: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .detail-intent-mini span:first-child { font-family: 'Syne', sans-serif; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; opacity: 0.6; }
+    .detail-intent-score { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; }
+
+    @media (max-width: 768px) {
+      .shop-wrap { grid-template-columns: 1fr; gap: 28px; padding: 28px 18px; }
+      .dash-wrap, .catalog-wrap { padding: 28px 18px; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .card.score-card { grid-column: span 1; }
+      nav { padding: 12px 18px; }
+      .nav-stats { display: none; }
+      .dash-title { font-size: 26px; }
+      .stats-bar { grid-template-columns: 1fr 1fr; }
+      .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+      .cart-panel { width: 100%; }
+      .detail-grid { grid-template-columns: 1fr; gap: 28px; }
+      .detail-gallery { position: static; }
+      .detail-wrap { padding: 24px 18px 60px; }
+      .detail-name { font-size: 24px; }
+      .detail-price { font-size: 26px; }
+      .spec-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sim-banner">⚡ SIMULATION ONLY — No real data collected, stored, or transmitted</div>
+
+<nav>
+  <div class="nav-logo">Precisia <span>AI</span></div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" id="tab-shop" onclick="showPage('shop',this)">Featured</button>
+    <button class="tab-btn" id="tab-catalog" onclick="showPage('catalog',this)">Catalog</button>
+    <button class="tab-btn" id="tab-dashboard" onclick="showPage('dashboard',this)">Dashboard</button>
+  </div>
+  <div class="nav-stats">
+    <div class="nav-stat">🛒 <strong id="nav-cart-count">0</strong> in cart</div>
+    <div class="nav-stat">👁 <strong id="nav-viewed">0</strong> viewed</div>
+    <div class="nav-intent-pill" id="nav-intent-pill">Intent: 0%</div>
+  </div>
+</nav>
+
+<!-- ════ PAGE 1: FEATURED ════ -->
+<div id="page-shop" class="page active">
+  <div class="shop-wrap">
+    <div>
+      <div class="product-visual">
+        <div class="sim-tag">Simulated Product</div>
+        <svg class="headphone-svg" viewBox="0 0 200 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M30 95 C30 48 80 10 100 10 C120 10 170 48 170 95" stroke="#0a0a0f" stroke-width="10" stroke-linecap="round" fill="none"/>
+          <rect x="12" y="90" width="36" height="52" rx="14" fill="#0a0a0f"/>
+          <rect x="18" y="98" width="24" height="36" rx="10" fill="#2a2a3f"/>
+          <circle cx="30" cy="116" r="8" fill="#0038ff" opacity="0.7"/>
+          <rect x="152" y="90" width="36" height="52" rx="14" fill="#0a0a0f"/>
+          <rect x="158" y="98" width="24" height="36" rx="10" fill="#2a2a3f"/>
+          <circle cx="170" cy="116" r="8" fill="#0038ff" opacity="0.7"/>
+          <path d="M170 142 Q180 165 170 168" stroke="#0a0a0f" stroke-width="4" stroke-linecap="round" fill="none"/>
+          <ellipse cx="30" cy="116" rx="11" ry="15" fill="none" stroke="#3a3a5f" stroke-width="1.5"/>
+          <ellipse cx="170" cy="116" rx="11" ry="15" fill="none" stroke="#3a3a5f" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+    <div>
+      <div class="product-label">Simulated E-Commerce · Smartphones</div>
+      <h1 class="product-name">Nexora Spark 5G</h1>
+      <div class="product-price">₹11,999 <sub>incl. GST</sub></div>
+      <p class="product-desc">6.5" FHD+ display, Octa-core 5G chipset, 50MP triple camera, and a 5000mAh battery. Ideal for students and first-time 5G smartphone buyers looking for a reliable daily driver.</p>
+      <div class="intent-box">
+        <div class="intent-label-row">
+          <span>Simulated Intent Score</span>
+          <span class="intent-pct" id="shop-pct">0%</span>
+        </div>
+        <div class="meter-track"><div class="meter-fill" id="shop-fill"></div></div>
+        <div class="intent-note">Every interaction across all pages contributes to your shared score</div>
+      </div>
+      <div class="btn-group">
+        <button class="action-btn primary" onclick="featuredAddCart()">🛒 Add to Cart <span class="btn-badge">+25 pts</span></button>
+        <button class="action-btn" onclick="featuredViewDetails()">🔍 View Product Details <span class="btn-badge">+10 pts</span></button>
+        <button class="action-btn browse-trigger-btn" onclick="openBrowser()">🌐 Browse & Search Products <span class="btn-badge" style="background:#7c3aed">Search</span></button>
+      </div>
+      <div class="score-events">
+        <div class="events-title">Interaction Log</div>
+        <div class="event-log" id="event-log">
+          <div class="event-item show" style="font-style:italic;opacity:0.4"><span class="event-dot" style="background:var(--muted)"></span>No interactions yet — click a button above</div>
+        </div>
+      </div>
+      <button class="view-catalog-btn" onclick="goTo('catalog')">Browse Full Catalog — 42 Products →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE 2: CATALOG ════ -->
+<div id="page-catalog" class="page">
+  <div class="catalog-wrap">
+    <h2 class="catalog-title">Product <span>Catalog</span></h2>
+    <p class="catalog-sub">42 relatable everyday Indian products across 7 categories — interact to build your intent score</p>
+
+    <div class="sim-disclaimer">
+      <strong>⚠ SIMULATION NOTICE:</strong> All products and cart actions in this demo are simulated for ideathon purposes. No real purchases, payments, or external data sources are used. All product data is entirely fictional and hardcoded in JavaScript.
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-label">Products Viewed</div><div class="stat-val" id="cat-viewed">0</div></div>
+      <div class="stat-card"><div class="stat-label">Items in Cart</div><div class="stat-val" id="cat-cart">0</div></div>
+      <div class="stat-card"><div class="stat-label">Intent Score (pts)</div><div class="stat-val" id="cat-score" style="color:var(--accent2)">0</div></div>
+      <div class="stat-card"><div class="stat-label">Intent Probability</div><div class="stat-val" id="cat-pct" style="color:var(--accent2)">0%</div></div>
+    </div>
+
+    <div class="catalog-controls">
+      <button class="filter-btn active" onclick="filterCatalog('All',this)">All (42)</button>
+      <button class="filter-btn" onclick="filterCatalog('Smartphones',this)">📱 Smartphones</button>
+      <button class="filter-btn" onclick="filterCatalog('Earphones',this)">🎧 Earphones</button>
+      <button class="filter-btn" onclick="filterCatalog('Kitchen',this)">🍳 Kitchen</button>
+      <button class="filter-btn" onclick="filterCatalog('Bags',this)">🎒 Bags</button>
+      <button class="filter-btn" onclick="filterCatalog('Smartwatches',this)">⌚ Smartwatches</button>
+      <button class="filter-btn" onclick="filterCatalog('Power Banks',this)">🔋 Power Banks</button>
+      <button class="filter-btn" onclick="filterCatalog('Study & Desk',this)">💡 Study & Desk</button>
+      <input class="catalog-search" type="text" placeholder="Search products…" oninput="searchCatalog(this.value)" />
+      <span class="catalog-count" id="catalog-count">42 products</span>
+    </div>
+
+    <div class="product-grid" id="product-grid"></div>
+  </div>
+</div>
+
+<!-- ════ PAGE: PRODUCT DETAIL ════ -->
+<div id="page-detail" class="page">
+  <div class="detail-wrap">
+    <button class="detail-back" onclick="goBackFromDetail()">← Back to Catalog</button>
+    <div class="detail-grid">
+      <!-- Left: Image & Thumbnails -->
+      <div class="detail-gallery">
+        <div class="detail-img-main" id="detail-img-main">
+          <div class="detail-sim-tag">Simulated Product</div>
+          <span id="detail-emoji">📱</span>
+        </div>
+        <div class="detail-img-thumbs" id="detail-thumbs"></div>
+      </div>
+
+      <!-- Right: All Info -->
+      <div class="detail-info">
+        <div class="detail-cat-row">
+          <span class="detail-cat-pill" id="detail-cat-pill">Category</span>
+          <span class="detail-id" id="detail-id">ID</span>
+        </div>
+        <h1 class="detail-name" id="detail-name">Product Name</h1>
+        <div class="detail-rating">
+          <span class="detail-stars" id="detail-stars">★★★★☆</span>
+          <span id="detail-rating-text">4.2 (1,284 ratings)</span>
+          <span>·</span>
+          <span id="detail-sold">3,400+ sold this month</span>
+        </div>
+        <div class="detail-price-row">
+          <div class="detail-price" id="detail-price">₹0</div>
+          <div class="detail-mrp" id="detail-mrp">₹0</div>
+          <div class="detail-discount" id="detail-discount">0% off</div>
+        </div>
+        <div class="detail-tax-note">Inclusive of all taxes. Free delivery on orders above ₹499. <em>(Simulated)</em></div>
+
+        <p class="detail-desc" id="detail-desc">Product description goes here.</p>
+
+        <!-- Specs -->
+        <div class="detail-specs">
+          <div class="detail-specs-title">Key Specifications</div>
+          <div class="spec-grid" id="detail-spec-grid"></div>
+        </div>
+
+        <!-- Usage -->
+        <div class="detail-usage">
+          <div class="detail-usage-title">Best Used For</div>
+          <div class="usage-list" id="detail-usage-list"></div>
+        </div>
+
+        <!-- Reviews -->
+        <div class="detail-reviews">
+          <div class="detail-reviews-title">Customer Reviews <span style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(Simulated)</span></div>
+          <div id="detail-reviews-list"></div>
+        </div>
+
+        <!-- CTA -->
+        <div class="detail-cta">
+          <button class="detail-cart-btn" id="detail-cart-btn" onclick="detailAddCart()">🛒 Add to Cart — +25 pts</button>
+          <button class="detail-wish-btn" onclick="this.textContent = this.textContent==='♡' ? '♥' : '♡'; this.style.color = this.style.color==='#ff4d2e' ? '' : '#ff4d2e'">♡</button>
+        </div>
+        <div class="detail-intent-mini">
+          <span>Your Intent Score</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="detail-intent-score" id="detail-intent-score">0 pts</div>
+            <div style="font-size:11px;opacity:0.5" id="detail-intent-pct">0%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ PAGE 3: DASHBOARD ════ -->
+<div id="page-dashboard" class="page">
+  <div class="dash-wrap">
+    <div class="dash-eyebrow">Company Intelligence Dashboard · Simulation</div>
+    <h2 class="dash-title">Intent <span>Prediction</span><br>Analytics</h2>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-label">Anonymous User ID</div>
+        <div class="card-value" id="dash-uid" style="font-size:16px;letter-spacing:0.5px;color:var(--muted)">—</div>
+        <div class="card-sub">No personal data stored</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Total Interactions</div>
+        <div class="card-value" id="dash-interactions">0</div>
+        <div class="card-sub">Across all catalog pages</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Products Viewed</div>
+        <div class="card-value" id="dash-viewed">0</div>
+        <div class="card-sub">Detail opens this session</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Cart Items</div>
+        <div class="card-value" id="dash-cartcount">0</div>
+        <div class="card-sub">Simulated cart — no checkout</div>
+      </div>
+      <div class="card score-card">
+        <div class="card-label">Cumulative Intent Score</div>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <div class="card-value" id="dash-score">0</div>
+          <div style="font-family:'Syne',sans-serif;font-size:18px;color:var(--muted)" id="dash-pct-label">/ 0%</div>
+        </div>
+        <div class="dash-meter-track"><div class="dash-meter-fill" id="dash-fill"></div></div>
+        <div class="threshold-label"><span>0</span><span>High Intent Threshold: 80 pts</span><span>200+</span></div>
+      </div>
+    </div>
+
+    <div class="verdict-card" id="verdict-card">
+      <div class="verdict-icon" id="verdict-icon">🤷</div>
+      <div>
+        <div class="verdict-title" id="verdict-title">No data yet</div>
+        <div class="verdict-desc" id="verdict-desc">Browse the catalog and interact with products to generate a simulated intent score.</div>
+      </div>
+    </div>
+
+    <div class="card breakdown-card">
+      <div class="card-label">Interaction Breakdown</div>
+      <div class="breakdown-row"><span class="br-action">🛒 Add to Cart</span><span class="br-count" id="br-cart">0 times</span><span class="br-points">+25 pts each</span></div>
+      <div class="breakdown-row"><span class="br-action">🔍 View Details</span><span class="br-count" id="br-view">0 times</span><span class="br-points">+10 pts each</span></div>
+      <div class="breakdown-row"><span class="br-action">👀 Continue Browsing</span><span class="br-count" id="br-browse">0 times</span><span class="br-points">+15 pts each</span></div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="card-label">Top Interacted Products (This Session)</div>
+      <div id="top-products-list"><div style="color:var(--muted);font-size:13px;padding:18px 0;text-align:center">Interact with products to see insights here</div></div>
+    </div>
+
+    <div class="privacy-card">
+      <div class="privacy-icon">🔒</div>
+      <div>
+        <div class="privacy-title">Privacy Notice</div>
+        <p class="privacy-text">This is a <strong>simulation prototype</strong> for an ideathon. No real user data is collected, stored, or transmitted. The anonymous User ID is randomly generated in-memory for this session and discarded on refresh. No cookies, browser storage, or personal identifiers are used. All 42 products are fictional and hardcoded — no external APIs or scraped data. Intent scoring runs entirely in your browser using JavaScript.</p>
+      </div>
+    </div>
+
+    <button class="reset-btn" onclick="resetSession()">↺ Reset Session</button>
+
+    <!-- ── EXPORT SECTION ── -->
+    <div class="export-section" id="export-section">
+      <div class="export-eyebrow">Business Intelligence · Simulation</div>
+      <div class="export-header">
+        <div class="export-title-block">
+          <div class="export-title">📤 Export High-Intent Users</div>
+          <div class="export-subtitle">Download a simulated CSV of anonymous users whose intent score reaches ≥ 80 pts. This demonstrates how companies receive qualified, privacy-safe leads — without any personal data.</div>
+        </div>
+        <button class="export-btn" id="export-btn" onclick="exportHighIntentCSV()">
+          ⬇ Download CSV
+        </button>
+      </div>
+
+      <div class="export-safety-note">
+        <strong>🔒 Privacy &amp; Consent Notice:</strong> This export demonstrates how companies receive high-intent leads using anonymous, consent-based session data. No personal user information is collected or shared. The exported file contains only behavioural signals — no names, emails, phone numbers, or device identifiers of any kind.
+      </div>
+
+      <div class="export-preview">
+        <div class="export-preview-label">Preview — Simulation Data (High-Intent Users Only, Score ≥ 80)</div>
+        <div id="export-preview-body"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cart Drawer -->
+<div class="cart-overlay" id="cart-overlay" onclick="toggleCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <div class="cart-title">🛒 Simulated Cart</div>
+    <button class="cart-close" onclick="toggleCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items-list"></div>
+  <div class="cart-footer">
+    <div class="cart-sim-note">⚠ Simulation only — no real transaction</div>
+    <div class="cart-total"><span>Simulated Total</span><span id="cart-total-price">₹0</span></div>
+    <button class="cart-checkout-btn" onclick="alert('🎯 This is a prototype!\n\nNo real checkout or payment exists. This demo proves the concept for Precisia AI ideathon purposes.\n\nIntent Score: ' + intentScore + ' pts')">Simulate Checkout (Demo Only)</button>
+  </div>
+</div>
+
+<button class="cart-fab" id="cart-fab" onclick="toggleCart()">
+  🛒 Cart <span class="cart-bubble" id="cart-bubble">0</span>
+</button>
+
+<script>
+// ══════════════════════════════════════════════
+//  42 FICTIONAL INDIAN EVERYDAY PRODUCTS — locally hardcoded
+//  Realistic mid-range prices for Indian e-commerce users
+// ══════════════════════════════════════════════
+const PRODUCTS = [
+  // ── SMARTPHONES (8) ──
+  {id:'SP01',name:'Nexora Spark 5G',cat:'Smartphones',price:11999,emoji:'📱',desc:'6.5" FHD+ display, Octa-core 5G chipset, 50MP triple camera, 5000mAh battery. Ideal for students and first-time smartphone buyers.'},
+  {id:'SP02',name:'Velox Z20 Pro',cat:'Smartphones',price:15999,emoji:'📱',desc:'6.67" AMOLED, 108MP primary camera with OIS, 67W fast charging, 8GB RAM. Great value flagship experience under ₹16,000.'},
+  {id:'SP03',name:'Orbis Lite 4G',cat:'Smartphones',price:9999,emoji:'📱',desc:'Compact 6.1" display, 5000mAh mega battery, 48MP dual camera, 4GB + 64GB. Reliable daily driver for budget-conscious users.'},
+  {id:'SP04',name:'Crestia Ultra 5G',cat:'Smartphones',price:17999,emoji:'📱',desc:'6.78" Super AMOLED 120Hz, Snapdragon-tier 5G, 64MP selfie cam, 120W HyperCharge. Near-premium at a mid-range price point.'},
+  {id:'SP05',name:'Pebble One 5G',cat:'Smartphones',price:13499,emoji:'📱',desc:'Slim metal-frame design, 50MP AI camera, 4500mAh, MIUI-style clean OS. Lightweight and sleek at just 175g.'},
+  {id:'SP06',name:'Aeron G5 Gamer',cat:'Smartphones',price:16499,emoji:'📱',desc:'Gaming-focused phone with 144Hz LCD, 6000mAh battery, shoulder triggers, and 12GB RAM. Built to handle heavy mobile titles.'},
+  {id:'SP07',name:'Solaris V10',cat:'Smartphones',price:10499,emoji:'📱',desc:'Rugged IP52-rated build, 5MP ultrawide, large 6.6" display, 18W fast charge. Great for outdoor and field workers.'},
+  {id:'SP08',name:'Zion Edge Plus',cat:'Smartphones',price:18499,emoji:'📱',desc:'Top-of-mid-range 6.74" curved AMOLED, 200MP periscope camera, 50W wireless charging, and stock-style Android UI.'},
+
+  // ── EARPHONES & HEADPHONES (7) ──
+  {id:'EP01',name:'BassBlast TWS Buds',cat:'Earphones',price:1299,emoji:'🎧',desc:'True wireless earbuds with 8hr playtime + 24hr case, IPX4 sweat resistance, and punchy bass. Perfect for gym and commute.'},
+  {id:'EP02',name:'ClearTone Neckband Pro',cat:'Earphones',price:999,emoji:'🎧',desc:'Bluetooth 5.1 neckband with magnetic earpieces, 20hr battery, and clear call quality. Best-in-class at under ₹1,000.'},
+  {id:'EP03',name:'AuraWear ANC Headphones',cat:'Earphones',price:3499,emoji:'🎧',desc:'Over-ear wireless with active noise cancellation, 30hr battery, and foldable design. Great for studying and office use.'},
+  {id:'EP04',name:'Miniso Pebble Buds',cat:'Earphones',price:1799,emoji:'🎧',desc:'Half-in-ear open design with ambient sound passthrough, 6hr buds + 18hr case, and smooth pairing. Stylish everyday companion.'},
+  {id:'EP05',name:'SoundCore Go TWS',cat:'Earphones',price:2499,emoji:'🎧',desc:'Balanced sound profile with EQ app, 10mm drivers, touch controls, and 32hr total playtime. Audiophile-friendly at mid-range price.'},
+  {id:'EP06',name:'BaseLine Pro Wired',cat:'Earphones',price:799,emoji:'🎧',desc:'3.5mm wired in-ear with extra deep bass, in-line mic, and tangle-free flat cable. Reliable daily-use earphones that last.'},
+  {id:'EP07',name:'ZenBuds Sleep Earbuds',cat:'Earphones',price:2999,emoji:'🎧',desc:'Ultra-small sleep earbuds with white noise playback, soft silicone wings, 8hr comfort-play. Designed for side-sleepers.'},
+
+  // ── KITCHEN APPLIANCES (7) ──
+  {id:'KA01',name:'SpeedMix 750W Mixer Grinder',cat:'Kitchen',price:2999,emoji:'🍳',desc:'750W motor with 3 jars — wet, dry, and chutney. SS blades with overload protection. Handles daily Indian cooking with ease.'},
+  {id:'KA02',name:'TurboBlend 550W Juicer Mixer',cat:'Kitchen',price:2499,emoji:'🍳',desc:'3-speed juicer-mixer combo with citrus press attachment. 1L SS liquidiser jar, 1.25L mixing jar included.'},
+  {id:'KA03',name:'ChefMate 1000W Grinder',cat:'Kitchen',price:4499,emoji:'🍳',desc:'High-torque 1000W motor with 5-year motor warranty. Atta-kneading attachment included. Quiet run, powerful output.'},
+  {id:'KA04',name:'QuickBoil 1.5L Electric Kettle',cat:'Kitchen',price:1499,emoji:'☕',desc:'1500W stainless steel kettle with auto shut-off, boil-dry protection, and 360° swivel base. Boils water in 4 minutes flat.'},
+  {id:'KA05',name:'BrewEasy Glass Kettle 1.7L',cat:'Kitchen',price:1999,emoji:'☕',desc:'Borosilicate glass body with LED temperature indicator and concealed coil. Safe, stylish, and easy to clean.'},
+  {id:'KA06',name:'CrispAir Mini Fryer 3L',cat:'Kitchen',price:3799,emoji:'🍳',desc:'Compact 1200W air fryer with 7 preset modes and touchscreen panel. Makes crispy snacks with 95% less oil. Perfect for 1–2 people.'},
+  {id:'KA07',name:'VoltChef Induction Cooktop',cat:'Kitchen',price:1999,emoji:'🍳',desc:'2000W induction cooktop with 7 power levels, child lock, and auto shut-off. Slim, portable, and energy efficient.'},
+
+  // ── BAGS & TRAVEL (5) ──
+  {id:'BG01',name:'CarryOn Laptop Backpack 30L',cat:'Bags',price:1799,emoji:'🎒',desc:'Water-resistant 30L backpack with padded 15.6" laptop sleeve, USB charging port, and multiple organizer pockets.'},
+  {id:'BG02',name:'SlimTech Laptop Sleeve 15"',cat:'Bags',price:799,emoji:'🎒',desc:'Neoprene sleeve with accessory pocket and hidden handle. Scratch-resistant lining fits laptops 14–15.6" perfectly.'},
+  {id:'BG03',name:'TrekMate Casual Daypack',cat:'Bags',price:1299,emoji:'🎒',desc:'Lightweight 20L daypack with breathable mesh back panel, rain cover, and dual side pockets. College and travel ready.'},
+  {id:'BG04',name:'ExecPro Office Bag',cat:'Bags',price:2299,emoji:'🎒',desc:'Smart office laptop bag with trolley sleeve, foam-padded 15.6" compartment, and document organizer. Professional look.'},
+  {id:'BG05',name:'HikePro 50L Travel Rucksack',cat:'Bags',price:2499,emoji:'🎒',desc:'50L trekking rucksack with internal frame, hip-belt support, rain cover, and hydration bladder sleeve. Built for long trips.'},
+
+  // ── SMARTWATCHES (5) ──
+  {id:'SW01',name:'FitRun Smart Band 6',cat:'Smartwatches',price:1999,emoji:'⌚',desc:'Slim fitness band with SpO2, heart rate, 14-day battery, and 5ATM water resistance. Tracks steps, sleep, and stress.'},
+  {id:'SW02',name:'ChronoX Pro Smartwatch',cat:'Smartwatches',price:3499,emoji:'⌚',desc:'1.3" AMOLED with calling support via BT, 100+ watch faces, GPS tracking, and 7-day battery. Looks premium, priced right.'},
+  {id:'SW03',name:'Glide Watch Active SE',cat:'Smartwatches',price:2799,emoji:'⌚',desc:'Round dial design with SpO2, period tracker, 20 sport modes, and always-on display. Stylish and functional.'},
+  {id:'SW04',name:'HealthSync Ultra Band',cat:'Smartwatches',price:4499,emoji:'⌚',desc:'Medical-grade ECG + BP monitor wristband with doctor-review app integration. Designed for health-conscious users 30+.'},
+  {id:'SW05',name:'Zest Kids Smartwatch',cat:'Smartwatches',price:2199,emoji:'⌚',desc:'Kids GPS smartwatch with 2-way calling, SOS alert, geofence alerts, and fun game mode. Safe and colourful for ages 5–12.'},
+
+  // ── POWER BANKS (5) ──
+  {id:'PB01',name:'VoltCell 10000mAh Power Bank',cat:'Power Banks',price:999,emoji:'🔋',desc:'Compact 10000mAh with dual USB-A output and 12W fast input. Fits in a jeans pocket — charges a phone 2.5 times.'},
+  {id:'PB02',name:'SwiftCharge 20000mAh PD',cat:'Power Banks',price:1799,emoji:'🔋',desc:'20000mAh with 22.5W USB-C PD output, can charge a laptop partially. LED power indicator and airline-safe build.'},
+  {id:'PB03',name:'MagPower 10000 Slim',cat:'Power Banks',price:1499,emoji:'🔋',desc:'Ultra-thin 10000mAh with built-in retractable USB-C and Micro-USB cables. No cable carrying required.'},
+  {id:'PB04',name:'SolarPulse 12000mAh',cat:'Power Banks',price:2199,emoji:'🔋',desc:'Solar + USB charging capable 12000mAh bank. Rugged rubber body with IP54 rating. Ideal for outdoor trips.'},
+  {id:'PB05',name:'TurboCell 25000mAh Hub',cat:'Power Banks',price:2499,emoji:'🔋',desc:'25000mAh with 65W fast charging for laptops, USB-C PD, and 3 USB-A ports. The ultimate travel charging hub.'},
+
+  // ── STUDY & DESK (5) ──
+  {id:'SD01',name:'BrightStudy LED Lamp',cat:'Study & Desk',price:899,emoji:'💡',desc:'Touch-control LED study lamp with 3 brightness levels and warm/cool light toggle. Flexible neck, USB-A charging port on base.'},
+  {id:'SD02',name:'FocusLite Architect Lamp',cat:'Study & Desk',price:1299,emoji:'💡',desc:'Clamp-on architect-style desk lamp with 5 colour temps and stepless dimming. 10W LED lasts 30,000+ hours.'},
+  {id:'SD03',name:'DeskPad XL Mouse Mat',cat:'Study & Desk',price:499,emoji:'🖱️',desc:'90cm × 40cm extended desk mat with stitched edges, non-slip base, and smooth surface for mouse and keyboard.'},
+  {id:'SD04',name:'CoolRise Laptop Cooling Pad',cat:'Study & Desk',price:1199,emoji:'💻',desc:'Dual 140mm fan cooling pad with adjustable height, USB hub, and LED indicator. Prevents thermal throttling.'},
+  {id:'SD05',name:'StudyPro Portable Monitor 15.6"',cat:'Study & Desk',price:8999,emoji:'🖥️',desc:'1080p FHD IPS portable display with USB-C and HDMI input. Ideal for students needing dual screens on the go.'},
+];
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let intentScore = 0;
+let cart = [];
+let counts = { cart: 0, view: 0, browse: 0 };
+let events = [];
+let productInteractions = {};
+let currentFilter = 'All';
+let currentSearch = '';
+
+const anonId = 'USR-' + Math.random().toString(36).substr(2,5).toUpperCase()
+             + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+
+const CAT_COLORS = { 'Smartphones':'#0038ff', 'Earphones':'#9c27b0', 'Kitchen':'#e65100', 'Bags':'#5d4037', 'Smartwatches':'#00695c', 'Power Banks':'#1565c0', 'Study & Desk':'#c62828' };
+const CAT_BG     = { 'Smartphones':'#e8eeff', 'Earphones':'#f3e8ff', 'Kitchen':'#fff3e8', 'Bags':'#f3ede8', 'Smartwatches':'#e8f5f3', 'Power Banks':'#e3f0ff', 'Study & Desk':'#fff0f0' };
+
+// ══════════════════════════════════════════════
+//  CORE SCORE ENGINE
+// ══════════════════════════════════════════════
+function addScore(pts, label, productId) {
+  intentScore += pts;
+
+  const isCart = label.toLowerCase().includes('cart');
+  const isView = label.toLowerCase().includes('detail') || label.toLowerCase().includes('view');
+  if (isCart) counts.cart++;
+  else if (isView) counts.view++;
+  else counts.browse++;
+
+  events.unshift({ label, pts, time: new Date().toLocaleTimeString() });
+
+  if (productId) {
+    if (!productInteractions[productId]) productInteractions[productId] = { views:0, carts:0, pts:0 };
+    productInteractions[productId].pts += pts;
+    if (isCart) productInteractions[productId].carts++;
+    else if (isView) productInteractions[productId].views++;
+  }
+
+  refreshAllUI();
+}
+
+function getIntentPct() {
+  return Math.min(Math.round((intentScore / 200) * 100), 100);
+}
+
+// ══════════════════════════════════════════════
+//  FEATURED PAGE ACTIONS
+// ══════════════════════════════════════════════
+function featuredAddCart() {
+  addScore(25, 'Added to Cart: SP01', 'SP01');
+  cart.push({ ...PRODUCTS[0] });
+  refreshCartUI();
+}
+function featuredViewDetails() {
+  addScore(10, 'Viewed Details: SP01', 'SP01');
+}
+
+// ══════════════════════════════════════════════
+//  CATALOG RENDER
+// ══════════════════════════════════════════════
+function renderCatalog() {
+  const grid = document.getElementById('product-grid');
+  const filtered = PRODUCTS.filter(p => {
+    const matchCat = currentFilter === 'All' || p.cat === currentFilter;
+    const q = currentSearch;
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q);
+    return matchCat && matchSearch;
+  });
+
+  document.getElementById('catalog-count').textContent = filtered.length + ' product' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="no-results">🔍 No products found. Try a different search or filter.</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => {
+    const inCart = cart.some(c => c.id === p.id);
+    const col = CAT_COLORS[p.cat] || '#333';
+    const bg  = CAT_BG[p.cat]    || '#eee';
+    return `
+      <div class="prod-card">
+        <div class="prod-img" style="background:${bg}">
+          ${p.emoji}
+          <span class="prod-cat-badge" style="background:${col}">${p.cat}</span>
+          <span class="prod-id-badge">${p.id}</span>
+          <span class="in-cart-badge ${inCart ? 'show' : ''}" id="incart-${p.id}">✓ In Cart</span>
+        </div>
+        <div class="prod-body">
+          <div class="prod-name">${p.name}</div>
+          <div class="prod-desc">${p.desc}</div>
+          <div class="prod-price">₹${p.price.toLocaleString('en-IN')}</div>
+          <div class="prod-actions">
+            <button class="prod-btn" onclick="catalogView('${p.id}')">🔍 Details +10</button>
+            <button class="prod-btn cart ${inCart ? 'added' : ''}" id="cartbtn-${p.id}" onclick="catalogCart('${p.id}')">
+              ${inCart ? '✓ Added' : '🛒 Cart +25'}
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════
+//  PRODUCT DETAIL DATA — specs, usage, reviews per category
+// ══════════════════════════════════════════════
+const DETAIL_DATA = {
+  'Smartphones': {
+    specs: [
+      {k:'Display',v:'6.5" FHD+ LCD / AMOLED'},
+      {k:'Processor',v:'Octa-core up to 2.4GHz'},
+      {k:'RAM + Storage',v:'6GB + 128GB (expandable)'},
+      {k:'Camera',v:'50MP + 8MP + 2MP Triple'},
+      {k:'Battery',v:'5000mAh with 18W fast charge'},
+      {k:'Connectivity',v:'5G, Wi-Fi 6, Bluetooth 5.2'},
+      {k:'OS',v:'Android 13, 2 years updates'},
+      {k:'Weight',v:'185g, IP52 rated'},
+    ],
+    usage: [
+      {icon:'🎓', text:'Students & first-time buyers looking for a reliable 5G smartphone under ₹15,000.'},
+      {icon:'📷', text:'Casual photographers who want a good AI camera for social media shots.'},
+      {icon:'🎮', text:'Light gamers who play casual titles and stream video on the go.'},
+      {icon:'💼', text:'Working professionals who need dependable battery life for calls and apps.'},
+    ],
+    reviews: [
+      {name:'Rohit M.', loc:'Pune, MH', stars:'★★★★★', text:'Battery life is outstanding — easily lasts two full days on my usage. Camera is excellent for the price range.'},
+      {name:'Priya K.', loc:'Bengaluru, KA', stars:'★★★★☆', text:'5G speeds are noticeably fast in my area. The screen is bright and vivid. Slightly bulky but manageable.'},
+      {name:'Arjun S.', loc:'Delhi, DL', stars:'★★★★☆', text:'Great daily driver. Heating is minimal even during 1hr gaming sessions. Would recommend to anyone under this budget.'},
+    ]
+  },
+  'Earphones': {
+    specs: [
+      {k:'Driver Size',v:'10mm Dynamic Driver'},
+      {k:'Frequency',v:'20Hz – 20kHz'},
+      {k:'Connectivity',v:'Bluetooth 5.3 / 3.5mm'},
+      {k:'Playtime',v:'8 hrs buds + 24 hrs case'},
+      {k:'Charging',v:'USB-C, 10min = 1hr play'},
+      {k:'Water Rating',v:'IPX4 sweat & splash proof'},
+      {k:'Latency',v:'< 60ms low-latency mode'},
+      {k:'Weight',v:'5g per earbud'},
+    ],
+    usage: [
+      {icon:'🏃', text:'Fitness enthusiasts who need IPX-rated earphones for gym and outdoor runs.'},
+      {icon:'📞', text:'Remote workers who want clear call quality with background noise isolation.'},
+      {icon:'🎵', text:'Music lovers who want rich bass and clear highs at an affordable price.'},
+      {icon:'🚇', text:'Daily commuters looking for compact earphones that pair instantly every morning.'},
+    ],
+    reviews: [
+      {name:'Sneha R.', loc:'Mumbai, MH', stars:'★★★★★', text:'Sound quality is stunning for this price. Bass is punchy without being overwhelming. The case is compact and sturdy.'},
+      {name:'Vikram P.', loc:'Chennai, TN', stars:'★★★★☆', text:'Call quality is very clear. My colleagues can hear me perfectly even when I am on the road. Battery easily lasts 2 days.'},
+      {name:'Anjali T.', loc:'Hyderabad, TS', stars:'★★★★☆', text:'Fit is comfortable for long sessions. Did not fall out even during a 5km run. Great value for the price.'},
+    ]
+  },
+  'Kitchen': {
+    specs: [
+      {k:'Motor Power',v:'750W – 1000W'},
+      {k:'Jars',v:'3 jars incl. chutney jar'},
+      {k:'Material',v:'Food-grade SS blades'},
+      {k:'Speed',v:'3 speed + pulse'},
+      {k:'Capacity',v:'1.5L liquidiser, 1L dry'},
+      {k:'Safety',v:'Overload & auto-cutoff'},
+      {k:'Warranty',v:'2 yrs product, 5 yrs motor'},
+      {k:'Voltage',v:'220–240V, 50Hz'},
+    ],
+    usage: [
+      {icon:'🍛', text:'Indian households for daily grinding of chutneys, masalas, and wet pastes.'},
+      {icon:'🥤', text:'Health-conscious users who prepare fresh juices and smoothies every morning.'},
+      {icon:'🧁', text:'Home bakers who need a reliable blender for batters and doughs.'},
+      {icon:'👨‍👩‍👧', text:'Joint families needing a high-capacity, heavy-duty kitchen appliance that lasts years.'},
+    ],
+    reviews: [
+      {name:'Meena V.', loc:'Coimbatore, TN', stars:'★★★★★', text:'Makes idli-dosa batter perfectly every single time. Motor is quiet compared to my old grinder. Very happy with this purchase.'},
+      {name:'Kavita D.', loc:'Ahmedabad, GJ', stars:'★★★★☆', text:'Blends smoothly and jars are easy to clean. The stainless-steel body looks premium. Handles are comfortable to grip.'},
+      {name:'Suresh L.', loc:'Jaipur, RJ', stars:'★★★★☆', text:'Solid build quality. Used it daily for 4 months and still running perfectly. Would recommend for any Indian kitchen.'},
+    ]
+  },
+  'Bags': {
+    specs: [
+      {k:'Capacity',v:'22L – 30L'},
+      {k:'Material',v:'600D Water-resistant Nylon'},
+      {k:'Laptop Slot',v:'Fits up to 15.6" laptops'},
+      {k:'USB Port',v:'External USB-A pass-through'},
+      {k:'Pockets',v:'6+ compartments + key hook'},
+      {k:'Back Panel',v:'Ergonomic mesh padding'},
+      {k:'Straps',v:'Padded, adjustable shoulder'},
+      {k:'Weight',v:'0.8kg – 1.2kg empty'},
+    ],
+    usage: [
+      {icon:'🎓', text:'College students who carry laptops, books, and accessories on campus daily.'},
+      {icon:'✈️', text:'Weekend travellers who need a versatile carry-on that fits under the seat.'},
+      {icon:'💼', text:'Professionals commuting with a laptop, tablet, and office essentials.'},
+      {icon:'🏕️', text:'Day hikers who want a comfortable, organised backpack for short treks.'},
+    ],
+    reviews: [
+      {name:'Rahul G.', loc:'Noida, UP', stars:'★★★★★', text:'Perfect for college. Laptop fits snugly with good padding. The USB port is super useful. Back panel is comfortable even on long walks.'},
+      {name:'Nisha B.', loc:'Kolkata, WB', stars:'★★★★☆', text:'Looks stylish and premium. Stitching is solid. Used it for a 3-day trip and it held everything I needed without feeling heavy.'},
+      {name:'Deepak M.', loc:'Bengaluru, KA', stars:'★★★★☆', text:'Water-resistant coating saved my laptop once during light rain. Plenty of pockets for everything I carry daily.'},
+    ]
+  },
+  'Smartwatches': {
+    specs: [
+      {k:'Display',v:'1.3" AMOLED / TFT LCD'},
+      {k:'Battery',v:'7–14 days typical use'},
+      {k:'Health Sensors',v:'SpO2, HR, Stress, Sleep'},
+      {k:'Water Rating',v:'5ATM / IP68'},
+      {k:'GPS',v:'Built-in / Connected GPS'},
+      {k:'Sports Modes',v:'100+ auto-detect modes'},
+      {k:'Charging',v:'Magnetic snap, 2hr full'},
+      {k:'Compatibility',v:'Android 6+ / iOS 12+'},
+    ],
+    usage: [
+      {icon:'🏃', text:'Fitness enthusiasts tracking daily steps, workouts, and calorie burn accurately.'},
+      {icon:'❤️', text:'Health-conscious users monitoring heart rate, SpO2 and stress levels through the day.'},
+      {icon:'😴', text:'People who want insights into sleep quality and REM cycles for better recovery.'},
+      {icon:'📲', text:'Busy professionals who need wrist notifications without pulling out their phone.'},
+    ],
+    reviews: [
+      {name:'Aditya K.', loc:'Pune, MH', stars:'★★★★★', text:'SpO2 and heart rate are accurate compared to my hospital readings. Battery lasts well over a week with AOD off. Great value.'},
+      {name:'Swati N.', loc:'Delhi, DL', stars:'★★★★☆', text:'Stylish design and the AMOLED screen is very bright even in sunlight. Sleep tracking has genuinely helped me improve my schedule.'},
+      {name:'Karan J.', loc:'Surat, GJ', stars:'★★★★☆', text:'100+ sport modes actually work well. Tracked my cycling route accurately via GPS. Comfortable for all-day wear.'},
+    ]
+  },
+  'Power Banks': {
+    specs: [
+      {k:'Capacity',v:'10,000 – 25,000mAh'},
+      {k:'Output',v:'USB-C PD 22.5W, USB-A QC'},
+      {k:'Input',v:'USB-C 18W fast charge'},
+      {k:'Ports',v:'1× USB-C + 2× USB-A'},
+      {k:'Indicator',v:'4-LED / LCD battery display'},
+      {k:'Safety',v:'OCP, OVP, short-circuit protect'},
+      {k:'Airline Safe',v:'Yes (< 100Wh)'},
+      {k:'Weight',v:'220g – 420g'},
+    ],
+    usage: [
+      {icon:'✈️', text:'Travellers who need reliable backup power across long flights and road trips.'},
+      {icon:'📚', text:'Students who spend long hours on campus without access to power outlets.'},
+      {icon:'🏕️', text:'Outdoor adventurers who camp or trek and need emergency device charging.'},
+      {icon:'💼', text:'Professionals on back-to-back meetings who cannot afford a dead phone battery.'},
+    ],
+    reviews: [
+      {name:'Pooja S.', loc:'Hyderabad, TS', stars:'★★★★★', text:'Charges my phone 2.5 times on a single charge. Fast charging works great. The slim design fits easily in my handbag.'},
+      {name:'Manish T.', loc:'Mumbai, MH', stars:'★★★★☆', text:'Reliable and sturdy. Has saved me many times during long commutes. USB-C PD charges my laptop partially as well.'},
+      {name:'Ravi C.', loc:'Jaipur, RJ', stars:'★★★★☆', text:'Excellent build quality and the LED indicator is accurate. Passed airport security without issues. Highly recommended.'},
+    ]
+  },
+  'Study & Desk': {
+    specs: [
+      {k:'Brightness',v:'400–800 lux adjustable'},
+      {k:'Color Temp',v:'2700K warm to 6500K cool'},
+      {k:'Power',v:'10–12W LED, A++ rated'},
+      {k:'Lifespan',v:'30,000+ hours'},
+      {k:'Control',v:'Touch / rotary dimmer'},
+      {k:'Extras',v:'USB-A charging port on base'},
+      {k:'Neck',v:'360° flexible gooseneck'},
+      {k:'Certifications',v:'BIS, CE, RoHS compliant'},
+    ],
+    usage: [
+      {icon:'📖', text:'Students who study late at night and need flicker-free, eye-safe illumination.'},
+      {icon:'💻', text:'Remote workers and developers who need consistent desk lighting for video calls.'},
+      {icon:'🎨', text:'Artists and designers who require accurate colour temperature for creative work.'},
+      {icon:'😴', text:'Readers who want warm, dim light in the evenings that does not disrupt sleep.'},
+    ],
+    reviews: [
+      {name:'Tanvi M.', loc:'Nagpur, MH', stars:'★★★★★', text:'My eyes feel so much more comfortable after switching to this lamp for 4-hour study sessions. The warm light setting is perfect at night.'},
+      {name:'Sachin R.', loc:'Chennai, TN', stars:'★★★★☆', text:'Sturdy build and the USB charging port is very handy. Touch control is responsive. Great value for ₹1,000.'},
+      {name:'Divya P.', loc:'Bengaluru, KA', stars:'★★★★☆', text:'Exactly what I needed for WFH. The flexible arm lets me position light perfectly. Compact and does not clutter my desk.'},
+    ]
+  }
+};
+
+// Simulated MRP & rating data keyed by product id
+function getDetailExtras(p) {
+  const discounts = {SP:20, EP:15, KA:18, BG:22, SW:25, PB:12, SD:18};
+  const prefix = p.id.substring(0,2);
+  const discPct = discounts[prefix] || 15;
+  const mrp = Math.round(p.price / (1 - discPct/100) / 100) * 100;
+  const ratingBase = 3.8 + (p.id.charCodeAt(3) % 12) / 10;
+  const rating = Math.min(4.9, ratingBase).toFixed(1);
+  const reviews = 800 + (p.id.charCodeAt(2) * 47) % 2400;
+  const sold = 1200 + (p.id.charCodeAt(3) * 83) % 4800;
+  return { mrp, discPct, rating, reviews, sold };
+}
+
+// ══════════════════════════════════════════════
+//  OPEN PRODUCT DETAIL PAGE
+// ══════════════════════════════════════════════
+let detailProductId = null;
+let detailFromPage  = 'catalog';
+
+function catalogView(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  openDetail(p);
+}
+
+function openDetail(p) {
+  detailProductId = p.id;
+  detailFromPage  = 'catalog';
+
+  // Score event
+  addScore(10, `Viewed Details: ${p.name}`, p.id);
+
+  // Populate page
+  const col = CAT_COLORS[p.cat] || '#333';
+  const bg  = CAT_BG[p.cat]    || '#eee';
+  const extras = getDetailExtras(p);
+  const data = DETAIL_DATA[p.cat] || DETAIL_DATA['Smartphones'];
+
+  document.getElementById('detail-emoji').textContent = p.emoji;
+  document.getElementById('detail-img-main').style.background = `linear-gradient(135deg, ${bg}, ${bg}cc)`;
+
+  // Thumbnails — show 4 pseudo views of the same emoji
+  const thumbAngles = ['🔍','📦','🛠️','📋'];
+  document.getElementById('detail-thumbs').innerHTML = [p.emoji, ...thumbAngles].slice(0,4).map((e,i) =>
+    `<div class="detail-thumb ${i===0?'active':''}" onclick="document.getElementById('detail-emoji').textContent='${i===0?p.emoji:e}'">
+      ${i===0 ? p.emoji : e}
+    </div>`
+  ).join('');
+
+  document.getElementById('detail-cat-pill').textContent = p.cat;
+  document.getElementById('detail-cat-pill').style.background = col;
+  document.getElementById('detail-id').textContent = 'SKU: ' + p.id;
+  document.getElementById('detail-name').textContent = p.name;
+
+  const stars = '★'.repeat(Math.round(parseFloat(extras.rating))) + '☆'.repeat(5 - Math.round(parseFloat(extras.rating)));
+  document.getElementById('detail-stars').textContent = stars;
+  document.getElementById('detail-rating-text').textContent = `${extras.rating} (${extras.reviews.toLocaleString()} ratings)`;
+  document.getElementById('detail-sold').textContent = `${(extras.sold).toLocaleString()}+ sold this month`;
+
+  document.getElementById('detail-price').textContent = '₹' + p.price.toLocaleString('en-IN');
+  document.getElementById('detail-mrp').textContent   = '₹' + extras.mrp.toLocaleString('en-IN');
+  document.getElementById('detail-discount').textContent = extras.discPct + '% off';
+
+  document.getElementById('detail-desc').textContent = p.desc + ' All specifications and reviews shown are simulated for prototype demonstration.';
+
+  // Specs
+  document.getElementById('detail-spec-grid').innerHTML = data.specs.map(s =>
+    `<div class="spec-item"><div class="spec-key">${s.k}</div><div class="spec-val">${s.v}</div></div>`
+  ).join('');
+
+  // Usage
+  document.getElementById('detail-usage-list').innerHTML = data.usage.map(u =>
+    `<div class="usage-item"><span class="usage-icon">${u.icon}</span><span>${u.text}</span></div>`
+  ).join('');
+
+  // Reviews
+  document.getElementById('detail-reviews-list').innerHTML = data.reviews.map(r =>
+    `<div class="review-card">
+      <div class="review-header">
+        <span class="review-name">${r.name}</span>
+        <span class="review-stars">${r.stars}</span>
+      </div>
+      <div class="review-text">${r.text}</div>
+      <div class="review-location">📍 ${r.loc}</div>
+    </div>`
+  ).join('');
+
+  // CTA button state
+  const inCart = cart.some(c => c.id === p.id);
+  const cartBtn = document.getElementById('detail-cart-btn');
+  cartBtn.textContent = inCart ? '✓ Added to Cart' : '🛒 Add to Cart — +25 pts';
+  cartBtn.className = 'detail-cart-btn' + (inCart ? ' added' : '');
+
+  // Update intent display
+  updateDetailIntentMini();
+
+  // Navigate
+  document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-detail').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function updateDetailIntentMini() {
+  const pct = getIntentPct();
+  document.getElementById('detail-intent-score').textContent = intentScore + ' pts';
+  document.getElementById('detail-intent-pct').textContent = pct + '%';
+}
+
+function detailAddCart() {
+  const p = PRODUCTS.find(x => x.id === detailProductId);
+  if (!p) return;
+  cart.push({ ...p });
+  addScore(25, `Added to Cart: ${p.name}`, p.id);
+  const btn = document.getElementById('detail-cart-btn');
+  btn.textContent = '✓ Added to Cart';
+  btn.classList.add('added');
+  // Also update catalog card if visible
+  const catBtn = document.getElementById('cartbtn-' + p.id);
+  const catBadge = document.getElementById('incart-' + p.id);
+  if (catBtn)   { catBtn.textContent = '✓ Added'; catBtn.classList.add('added'); }
+  if (catBadge) catBadge.classList.add('show');
+  refreshCartUI();
+  updateDetailIntentMini();
+}
+
+function goBackFromDetail() {
+  document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+  document.getElementById('page-catalog').classList.add('active');
+  document.getElementById('tab-catalog').classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function catalogCart(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  cart.push({ ...p });
+  addScore(25, `Added to Cart: ${p.name}`, id);
+  const btn = document.getElementById('cartbtn-' + id);
+  const badge = document.getElementById('incart-' + id);
+  if (btn)   { btn.textContent = '✓ Added'; btn.classList.add('added'); }
+  if (badge) badge.classList.add('show');
+  refreshCartUI();
+}
+
+function filterCatalog(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCatalog();
+}
+
+function searchCatalog(val) {
+  currentSearch = val.toLowerCase().trim();
+  renderCatalog();
+}
+
+// ══════════════════════════════════════════════
+//  CART
+// ══════════════════════════════════════════════
+function toggleCart() {
+  document.getElementById('cart-panel').classList.toggle('open');
+  document.getElementById('cart-overlay').classList.toggle('open');
+}
+
+function refreshCartUI() {
+  const count = cart.length;
+  const total = cart.reduce((s, p) => s + p.price, 0);
+  document.getElementById('cart-bubble').textContent = count;
+  document.getElementById('cart-total-price').textContent = '₹' + total.toLocaleString('en-IN');
+  document.getElementById('cart-fab').classList.toggle('high', intentScore >= 80);
+
+  const list = document.getElementById('cart-items-list');
+  if (!count) {
+    list.innerHTML = '<div class="cart-empty">Your simulated cart is empty.<br><br>Browse the catalog and click "Add to Cart" on any product.</div>';
+  } else {
+    list.innerHTML = cart.map(p => `
+      <div class="cart-item">
+        <div class="cart-item-emoji">${p.emoji}</div>
+        <div class="cart-item-info">
+          <div class="cart-item-cat">${p.cat} · ${p.id}</div>
+          <div class="cart-item-name">${p.name}</div>
+          <div class="cart-item-price">₹${p.price.toLocaleString('en-IN')}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ══════════════════════════════════════════════
+//  GLOBAL UI REFRESH
+// ══════════════════════════════════════════════
+function refreshAllUI() {
+  const pct   = getIntentPct();
+  const isHigh = intentScore >= 80;
+
+  // Nav bar
+  document.getElementById('nav-cart-count').textContent = cart.length;
+  document.getElementById('nav-viewed').textContent = counts.view;
+  const pill = document.getElementById('nav-intent-pill');
+  pill.textContent = 'Intent: ' + pct + '%';
+  pill.classList.toggle('high', isHigh);
+
+  // Featured page meter
+  document.getElementById('shop-pct').textContent = pct + '%';
+  document.getElementById('shop-fill').style.width = pct + '%';
+
+  // Event log (featured page)
+  const log = document.getElementById('event-log');
+  log.innerHTML = '';
+  if (!events.length) {
+    log.innerHTML = '<div class="event-item show" style="font-style:italic;opacity:0.4"><span class="event-dot" style="background:var(--muted)"></span>No interactions yet — click a button above</div>';
+  } else {
+    events.slice(0, 5).forEach((e, i) => {
+      const el = document.createElement('div');
+      el.className = 'event-item';
+      el.innerHTML = `<span class="event-dot"></span><span>${e.label} <strong>+${e.pts} pts</strong></span><span style="margin-left:auto;font-size:11px;color:var(--muted)">${e.time}</span>`;
+      log.appendChild(el);
+      setTimeout(() => el.classList.add('show'), 20 * i);
+    });
+  }
+
+  // Catalog live stats
+  document.getElementById('cat-viewed').textContent = counts.view;
+  document.getElementById('cat-cart').textContent   = cart.length;
+  document.getElementById('cat-score').textContent  = intentScore;
+  document.getElementById('cat-pct').textContent    = pct + '%';
+
+  // Cart FAB
+  document.getElementById('cart-fab').classList.toggle('high', isHigh);
+
+  // Detail page live intent
+  if (document.getElementById('detail-intent-score')) updateDetailIntentMini();
+}
+
+// ══════════════════════════════════════════════
+//  DASHBOARD UPDATE
+// ══════════════════════════════════════════════
+function updateDashboard() {
+  const pct   = getIntentPct();
+  const isHigh = intentScore >= 80;
+
+  document.getElementById('dash-uid').textContent          = anonId;
+  document.getElementById('dash-score').textContent        = intentScore;
+  document.getElementById('dash-pct-label').textContent    = `/ ${pct}%`;
+  document.getElementById('dash-interactions').textContent = counts.cart + counts.view + counts.browse;
+  document.getElementById('dash-viewed').textContent       = counts.view;
+  document.getElementById('dash-cartcount').textContent    = cart.length;
+
+  const fill = document.getElementById('dash-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = isHigh
+    ? 'linear-gradient(90deg,#00c853,#69f0ae)'
+    : 'linear-gradient(90deg,#ff6d00,#ffab40)';
+
+  document.getElementById('br-cart').textContent   = counts.cart   + (counts.cart===1   ?' time':' times');
+  document.getElementById('br-view').textContent   = counts.view   + (counts.view===1   ?' time':' times');
+  document.getElementById('br-browse').textContent = counts.browse + (counts.browse===1 ?' time':' times');
+
+  // Verdict
+  const vc = document.getElementById('verdict-card');
+  if (intentScore === 0) {
+    vc.className = 'verdict-card';
+    document.getElementById('verdict-icon').textContent = '🤷';
+    document.getElementById('verdict-title').textContent = 'No data yet';
+    document.getElementById('verdict-desc').textContent = 'Browse the catalog and interact with products to generate a simulated intent score.';
+  } else if (isHigh) {
+    vc.className = 'verdict-card high';
+    document.getElementById('verdict-icon').textContent = '🚀';
+    document.getElementById('verdict-title').textContent = 'High Intent User – Notify Company';
+    document.getElementById('verdict-desc').textContent = `Score of ${intentScore} pts (${pct}%) exceeds the 80-point threshold. ${cart.length} item(s) in cart across ${counts.view} product view(s). The AI engine would trigger a real-time company alert and could surface a personalised discount or live support nudge.`;
+  } else {
+    vc.className = 'verdict-card low';
+    document.getElementById('verdict-icon').textContent = '💤';
+    document.getElementById('verdict-title').textContent = 'Low Intent User – Ignore';
+    document.getElementById('verdict-desc').textContent = `Score of ${intentScore} pts (${pct}%) is below the 80-point threshold. The user is passively browsing. No action triggered — preserving user experience and avoiding unnecessary interruptions.`;
+  }
+
+  // Top products
+  const sorted = Object.entries(productInteractions)
+    .sort((a,b) => b[1].pts - a[1].pts).slice(0,5);
+
+  const topList = document.getElementById('top-products-list');
+  if (!sorted.length) {
+    topList.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:18px 0;text-align:center">Interact with products to see insights here</div>';
+  } else {
+    topList.innerHTML = sorted.map(([id, data]) => {
+      const p = PRODUCTS.find(x => x.id === id);
+      if (!p) return '';
+      return `<div class="top-prod-row">
+        <div class="top-prod-emoji">${p.emoji}</div>
+        <div style="flex:1">
+          <div class="top-prod-name">${p.name}</div>
+          <div class="top-prod-actions">${data.views} view(s) · ${data.carts} cart add(s)</div>
+        </div>
+        <div class="top-prod-pts">+${data.pts} pts</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Refresh export preview
+  renderExportPreview();
+}
+
+// ══════════════════════════════════════════════
+//  SESSION TIMER
+// ══════════════════════════════════════════════
+const sessionStart = Date.now();
+
+function getSessionDuration() {
+  const secs = Math.floor((Date.now() - sessionStart) / 1000);
+  if (secs < 60) return secs + 's';
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return m + 'm ' + s + 's';
+}
+
+// ══════════════════════════════════════════════
+//  EXPORT — HIGH-INTENT USERS ONLY (≥ 80 pts)
+// ══════════════════════════════════════════════
+function getTopProduct() {
+  const sorted = Object.entries(productInteractions).sort((a,b) => b[1].pts - a[1].pts);
+  if (!sorted.length) return 'None';
+  const p = PRODUCTS.find(x => x.id === sorted[0][0]);
+  return p ? p.name : sorted[0][0];
+}
+
+function buildExportRows() {
+  // Only export if current user meets ≥ 80 threshold
+  if (intentScore < 80) return [];
+  return [{
+    userId: anonId,
+    score: intentScore,
+    level: 'High',
+    viewed: counts.view,
+    cartItems: cart.length,
+    topProduct: getTopProduct(),
+    duration: getSessionDuration(),
+    action: 'Notify Company'
+  }];
+}
+
+function renderExportPreview() {
+  const rows = buildExportRows();
+  const body = document.getElementById('export-preview-body');
+  const btn  = document.getElementById('export-btn');
+
+  if (!rows.length) {
+    body.innerHTML = `
+      <div class="export-locked">
+        <div class="export-locked-icon">🔒</div>
+        <div class="export-locked-msg">
+          <strong>No high-intent users to export yet.</strong><br>
+          Current score: <strong>${intentScore} pts</strong> — reach <strong>80 pts</strong> by interacting with the catalog to unlock export.
+        </div>
+      </div>`;
+    btn.disabled = true;
+    btn.textContent = '⬇ Download CSV';
+    btn.classList.remove('success');
+    return;
+  }
+
+  btn.disabled = false;
+  body.innerHTML = `
+    <table class="export-table">
+      <thead>
+        <tr>
+          <th>Anonymous User ID</th>
+          <th>Intent Score</th>
+          <th>Intent Level</th>
+          <th>Products Viewed</th>
+          <th>Items in Cart</th>
+          <th>Top Interacted Product</th>
+          <th>Session Duration</th>
+          <th>Recommended Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td style="font-family:'Syne',sans-serif;font-size:11px;color:var(--muted)">${r.userId}</td>
+            <td><strong>${r.score} pts</strong></td>
+            <td><span class="high-badge">✓ HIGH</span></td>
+            <td>${r.viewed}</td>
+            <td>${r.cartItems}</td>
+            <td style="max-width:160px;white-space:normal">${r.topProduct}</td>
+            <td>${r.duration}</td>
+            <td><span class="action-badge">Notify Company</span></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px;font-style:italic">
+      ⚠ Simulation Data — No real personal information. For ideathon demonstration only.
+    </div>`;
+}
+
+function exportHighIntentCSV() {
+  const rows = buildExportRows();
+  if (!rows.length) {
+    alert('⚠ Score not high enough yet.\n\nInteract with more products in the Catalog to reach 80+ pts, then come back to export.');
+    return;
+  }
+
+  // CSV columns — no # comment lines (breaks Excel/Sheets)
+  const headers = [
+    'Anonymous User ID',
+    'Intent Score',
+    'Intent Level',
+    'Products Viewed Count',
+    'Items Added to Cart',
+    'Top Interacted Product',
+    'Session Duration',
+    'Recommended Action',
+    'Export Type',
+    'Generated At'
+  ];
+
+  // Wrap a value safely for CSV
+  function csvCell(v) {
+    const s = String(v);
+    // If contains comma, quote, or newline — wrap in quotes and escape internal quotes
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  const dataRows = rows.map(r => [
+    csvCell(r.userId),
+    csvCell(r.score),
+    csvCell(r.level),
+    csvCell(r.viewed),
+    csvCell(r.cartItems),
+    csvCell(r.topProduct),
+    csvCell(r.duration),
+    csvCell(r.action),
+    csvCell('Simulation — Ideathon Demo'),
+    csvCell(new Date().toLocaleString('en-IN'))
+  ].join(','));
+
+  // BOM (\uFEFF) makes Excel open UTF-8 CSV correctly on Windows
+  const csvContent = '\uFEFF' + headers.join(',') + '\r\n' + dataRows.join('\r\n');
+  const filename   = 'Precisia_AI_HighIntent_Simulation.csv';
+
+  // ── Method 1: Blob + createObjectURL (best, works in Chrome/Edge/Firefox) ──
+  try {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    // Small delay before cleanup so browser can pick up the click
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+    showExportSuccess();
+    return;
+  } catch(e) { /* fall through to next method */ }
+
+  // ── Method 2: data: URI (fallback for older Safari / restricted contexts) ──
+  try {
+    const encoded = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+    const a       = document.createElement('a');
+    a.href        = encoded;
+    a.download    = filename;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 500);
+    showExportSuccess();
+    return;
+  } catch(e) { /* fall through to manual fallback */ }
+
+  // ── Method 3: Manual copy fallback (last resort) ──
+  showExportFallback(csvContent);
+}
+
+function showExportSuccess() {
+  const btn = document.getElementById('export-btn');
+  btn.textContent = '✓ Downloaded!';
+  btn.classList.add('success');
+  setTimeout(() => {
+    btn.textContent = '⬇ Download CSV';
+    btn.classList.remove('success');
+  }, 3500);
+}
+
+function showExportFallback(csvContent) {
+  // Show a modal with the raw CSV so user can copy-paste into a .csv file
+  const existing = document.getElementById('export-fallback-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'export-fallback-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:18px;padding:28px;max-width:600px;width:100%;max-height:80vh;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong style="font-family:'Syne',sans-serif;font-size:16px">📋 Copy CSV Manually</strong>
+        <button onclick="document.getElementById('export-fallback-modal').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888">✕</button>
+      </div>
+      <p style="font-size:13px;color:#888;line-height:1.6">Your browser blocked the auto-download. Copy the text below, paste it into a plain text editor (Notepad / TextEdit), and save it as <strong>Precisia_AI.csv</strong> — then open it in Excel or Google Sheets.</p>
+      <textarea id="export-fallback-text" readonly style="flex:1;min-height:200px;border:1.5px solid #e0ddd7;border-radius:10px;padding:12px;font-family:monospace;font-size:11px;resize:none;color:#333;background:#f9f9f9">${csvContent.replace(/</g,'&lt;')}</textarea>
+      <button onclick="
+        const ta=document.getElementById('export-fallback-text');
+        ta.select();ta.setSelectionRange(0,99999);
+        try{document.execCommand('copy');this.textContent='✓ Copied!';setTimeout(()=>this.textContent='📋 Copy All',2000);}catch(e){alert('Press Ctrl+A then Ctrl+C to copy');}
+      " style="padding:12px 20px;background:#0038ff;color:#fff;border:none;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;font-size:13px">📋 Copy All</button>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// ══════════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════════
+function showPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  (btn || document.getElementById('tab-' + page)).classList.add('active');
+  if (page === 'catalog') renderCatalog();
+  if (page === 'dashboard') updateDashboard();
+  refreshAllUI();
+}
+
+function goTo(page) { showPage(page, document.getElementById('tab-' + page)); }
+
+// ══════════════════════════════════════════════
+//  RESET
+// ══════════════════════════════════════════════
+function resetSession() {
+  intentScore = 0; cart = []; counts = {cart:0,view:0,browse:0};
+  events = []; productInteractions = {};
+  currentFilter = 'All'; currentSearch = '';
+  const s = document.querySelector('.catalog-search');
+  if (s) s.value = '';
+  document.querySelectorAll('.filter-btn').forEach((b,i) => { b.classList.toggle('active', i===0); });
+  refreshAllUI(); refreshCartUI(); updateDashboard(); renderCatalog();
+}
+
+// ══════════════════════════════════════════════
+//  PRODUCT BROWSER OVERLAY
+// ══════════════════════════════════════════════
+let browserQuery   = '';
+let browserCatFilter = 'All';
+let browserActiveProductId = null;
+
+function openBrowser() {
+  document.getElementById('browser-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderBrowserGrid();
+  document.getElementById('browser-search-input').focus();
+  addScore(10, 'Opened Product Browser', null);
+}
+
+function closeBrowser() {
+  document.getElementById('browser-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  closeBrowserModalDirect();
+}
+
+function onBrowserSearch(val) {
+  browserQuery = val.trim().toLowerCase();
+  document.getElementById('browser-search-clear').classList.toggle('show', browserQuery.length > 0);
+  document.getElementById('browser-url-path').textContent = browserQuery ? `search?q=${encodeURIComponent(browserQuery)}` : 'browse';
+  renderBrowserGrid();
+}
+
+function clearBrowserSearch() {
+  document.getElementById('browser-search-input').value = '';
+  onBrowserSearch('');
+  document.getElementById('browser-search-input').focus();
+}
+
+function quickSearch(term) {
+  document.getElementById('browser-search-input').value = term;
+  // reset cat filter
+  browserCatFilter = 'All';
+  document.querySelectorAll('.browser-cat-pill').forEach((p,i) => p.classList.toggle('active', i===0));
+  onBrowserSearch(term);
+}
+
+function browserFilterCat(cat, el) {
+  browserCatFilter = cat;
+  document.querySelectorAll('.browser-cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderBrowserGrid();
+}
+
+function renderBrowserGrid() {
+  const filtered = PRODUCTS.filter(p => {
+    const matchCat = browserCatFilter === 'All' || p.cat === browserCatFilter;
+    const matchQ   = !browserQuery ||
+      p.name.toLowerCase().includes(browserQuery) ||
+      p.cat.toLowerCase().includes(browserQuery) ||
+      p.desc.toLowerCase().includes(browserQuery);
+    return matchCat && matchQ;
+  });
+
+  const label = browserQuery
+    ? `${filtered.length} result${filtered.length!==1?'s':''} for "<strong style="color:#c7d2fe">${browserQuery}</strong>"`
+    : `Showing all ${filtered.length} products`;
+  document.getElementById('browser-results-count').innerHTML = label;
+
+  const grid = document.getElementById('browser-grid');
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="browser-no-results" style="grid-column:1/-1">
+      <div class="browser-no-results-icon">🔍</div>
+      <div class="browser-no-results-text">No products found for "<em>${browserQuery}</em>"<br><span style="font-size:12px;opacity:0.6">Try: smartphones, earphones, kettle, backpack…</span></div>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(p => {
+    const col = CAT_COLORS[p.cat] || '#555';
+    const bg  = CAT_BG[p.cat]    || '#eee';
+    const extras = getDetailExtras(p);
+    return `
+      <div class="browser-prod-card" onclick="openBrowserModal('${p.id}')">
+        <div class="browser-prod-img" style="background:linear-gradient(135deg,${bg}22,${bg}44)">
+          ${p.emoji}
+          <span class="browser-prod-cat" style="background:${col}">${p.cat}</span>
+        </div>
+        <div class="browser-prod-body">
+          <div class="browser-prod-name">${p.name}</div>
+          <div class="browser-prod-desc">${p.desc}</div>
+          <div class="browser-prod-footer">
+            <div class="browser-prod-price">₹${p.price.toLocaleString('en-IN')}</div>
+            <button class="browser-prod-btn" onclick="event.stopPropagation();openBrowserModal('${p.id}')">View →</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── BROWSER MODAL (fullscreen product inside browser) ──
+function openBrowserModal(id) {
+  const p = PRODUCTS.find(x => x.id === id);
+  if (!p) return;
+  browserActiveProductId = id;
+
+  addScore(10, `Viewed Details: ${p.name}`, id);
+
+  const col    = CAT_COLORS[p.cat] || '#555';
+  const extras = getDetailExtras(p);
+  const data   = DETAIL_DATA[p.cat] || DETAIL_DATA['Smartphones'];
+
+  // Breadcrumb
+  document.getElementById('bm-cat-crumb').textContent  = p.cat;
+  document.getElementById('bm-name-crumb').textContent = p.name;
+  document.getElementById('browser-url-path').textContent = `product/${p.id.toLowerCase()}`;
+
+  // Image area
+  document.getElementById('bm-emoji').textContent = p.emoji;
+  document.getElementById('bm-img').style.background = `linear-gradient(135deg, ${CAT_BG[p.cat]}33, ${CAT_BG[p.cat]}66)`;
+
+  // Thumbnails
+  const thumbIcons = [p.emoji,'📦','🛠️','📋'];
+  document.getElementById('bm-thumbs').innerHTML = thumbIcons.map((e,i) =>
+    `<div class="bm-thumb ${i===0?'active':''}" onclick="document.getElementById('bm-emoji').textContent='${e}';document.querySelectorAll('.bm-thumb').forEach((t,j)=>t.classList.toggle('active',j===${i}))">${e}</div>`
+  ).join('');
+
+  // Cat pill
+  const catPill = document.getElementById('bm-cat-pill');
+  catPill.textContent = p.cat;
+  catPill.style.background = col;
+
+  document.getElementById('bm-name').textContent = p.name;
+
+  const ratingNum = parseFloat(extras.rating);
+  const starsStr  = '★'.repeat(Math.round(ratingNum)) + '☆'.repeat(5-Math.round(ratingNum));
+  document.getElementById('bm-stars').textContent       = starsStr;
+  document.getElementById('bm-rating-text').textContent = `${extras.rating} (${extras.reviews.toLocaleString()})`;
+  document.getElementById('bm-sold').textContent        = `${extras.sold.toLocaleString()}+ sold`;
+
+  document.getElementById('bm-price').textContent    = '₹' + p.price.toLocaleString('en-IN');
+  document.getElementById('bm-mrp').textContent      = '₹' + extras.mrp.toLocaleString('en-IN');
+  document.getElementById('bm-discount').textContent = extras.discPct + '% off';
+  document.getElementById('bm-desc').textContent     = p.desc + ' All specifications and reviews are simulated for prototype purposes.';
+
+  // Specs
+  document.getElementById('bm-specs').innerHTML = data.specs.map(s =>
+    `<div class="bm-spec"><div class="bm-spec-k">${s.k}</div><div class="bm-spec-v">${s.v}</div></div>`
+  ).join('');
+
+  // Usage
+  document.getElementById('bm-usage').innerHTML = data.usage.map(u =>
+    `<div class="bm-usage-item"><span class="bm-usage-icon">${u.icon}</span><span>${u.text}</span></div>`
+  ).join('');
+
+  // Reviews
+  document.getElementById('bm-reviews').innerHTML = data.reviews.map(r =>
+    `<div class="bm-review">
+      <div class="bm-review-header">
+        <span class="bm-review-name">${r.name}</span>
+        <span class="bm-review-stars">${r.stars}</span>
+      </div>
+      <div class="bm-review-text">${r.text}</div>
+      <div class="bm-review-loc">📍 ${r.loc}</div>
+    </div>`
+  ).join('');
+
+  // Cart button state
+  const inCart = cart.some(c => c.id === id);
+  const btn = document.getElementById('bm-cart-btn');
+  btn.textContent = inCart ? '✓ Already in Cart' : '🛒 Add to Cart — +25 pts';
+  btn.className   = 'bm-cart-btn' + (inCart ? ' added' : '');
+
+  // Intent bar
+  updateBmIntentBar();
+
+  // Open overlay
+  document.getElementById('browser-modal-overlay').classList.add('open');
+  document.getElementById('browser-body').style.overflow = 'hidden';
+}
+
+function updateBmIntentBar() {
+  const pct = getIntentPct();
+  document.getElementById('bm-intent-val').textContent = `${intentScore} pts · ${pct}%`;
+  document.getElementById('bm-intent-val').style.color = intentScore >= 80 ? '#34d399' : '#818cf8';
+}
+
+function bmAddCart() {
+  const p = PRODUCTS.find(x => x.id === browserActiveProductId);
+  if (!p) return;
+  cart.push({ ...p });
+  addScore(25, `Added to Cart: ${p.name}`, p.id);
+  const btn = document.getElementById('bm-cart-btn');
+  btn.textContent = '✓ Added to Cart';
+  btn.classList.add('added');
+  refreshCartUI();
+  updateBmIntentBar();
+  // sync catalog card if rendered
+  const catBtn   = document.getElementById('cartbtn-' + p.id);
+  const catBadge = document.getElementById('incart-' + p.id);
+  if (catBtn)   { catBtn.textContent = '✓ Added'; catBtn.classList.add('added'); }
+  if (catBadge) catBadge.classList.add('show');
+}
+
+function bmGoFullDetail() {
+  const p = PRODUCTS.find(x => x.id === browserActiveProductId);
+  if (!p) { closeBrowser(); return; }
+  closeBrowser();
+  openDetail(p);
+}
+
+function closeBrowserModal(event) {
+  // close only if clicking the dark overlay itself
+  if (event && event.target !== document.getElementById('browser-modal-overlay')) return;
+  closeBrowserModalDirect();
+}
+
+function closeBrowserModalDirect() {
+  document.getElementById('browser-modal-overlay').classList.remove('open');
+  document.getElementById('browser-body').style.overflow = '';
+  browserActiveProductId = null;
+  if (browserQuery) {
+    document.getElementById('browser-url-path').textContent = `search?q=${encodeURIComponent(browserQuery)}`;
+  } else {
+    document.getElementById('browser-url-path').textContent = 'browse';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+refreshAllUI();
+refreshCartUI();
+</script>
+
+<!-- ════════════════════════════════════════
+     PRODUCT BROWSER OVERLAY
+════════════════════════════════════════ -->
+<div class="browser-overlay" id="browser-overlay">
+
+  <!-- Browser chrome (fake OS window bar) -->
+  <div class="browser-chrome">
+    <div class="browser-dots">
+      <div class="browser-dot red" onclick="closeBrowser()" title="Close browser"></div>
+      <div class="browser-dot yellow"></div>
+      <div class="browser-dot green"></div>
+    </div>
+    <div class="browser-urlbar">
+      <span class="browser-lock">🔒</span>
+      <span class="browser-url-text">precisia-store.in / <span id="browser-url-path">browse</span></span>
+    </div>
+    <button class="browser-close-btn" onclick="closeBrowser()">✕ Close Browser</button>
+  </div>
+
+  <!-- Browser body (scrollable store) -->
+  <div class="browser-body" id="browser-body">
+
+    <!-- Store hero + search -->
+    <div class="browser-store-hero">
+      <div class="browser-store-name">Precisia <span>Store</span> <span style="font-size:12px;opacity:0.4;font-weight:400;letter-spacing:0">· Simulation</span></div>
+      <div class="browser-store-tagline">India's fastest growing demo marketplace — 42 products · No real purchases</div>
+      <div class="browser-search-row">
+        <div class="browser-search-wrap">
+          <span class="browser-search-icon">🔍</span>
+          <input class="browser-search-input" id="browser-search-input" type="text"
+            placeholder="Search smartphones, earphones, mixer grinder…"
+            oninput="onBrowserSearch(this.value)"
+            onkeydown="if(event.key==='Enter') onBrowserSearch(this.value)" />
+          <button class="browser-search-clear" id="browser-search-clear" onclick="clearBrowserSearch()">✕</button>
+        </div>
+        <button class="browser-search-btn" onclick="onBrowserSearch(document.getElementById('browser-search-input').value)">Search</button>
+      </div>
+      <div class="browser-chips">
+        <span class="browser-chip" onclick="quickSearch('smartphones')">📱 Smartphones</span>
+        <span class="browser-chip" onclick="quickSearch('earphones')">🎧 Earphones</span>
+        <span class="browser-chip" onclick="quickSearch('mixer grinder')">🍳 Mixer Grinder</span>
+        <span class="browser-chip" onclick="quickSearch('backpack')">🎒 Bags</span>
+        <span class="browser-chip" onclick="quickSearch('smartwatch')">⌚ Smartwatches</span>
+        <span class="browser-chip" onclick="quickSearch('power bank')">🔋 Power Banks</span>
+        <span class="browser-chip" onclick="quickSearch('lamp')">💡 Study Lamps</span>
+        <span class="browser-chip" onclick="quickSearch('kettle')">☕ Kettles</span>
+        <span class="browser-chip" onclick="quickSearch('')">✨ Show All</span>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="browser-results-area">
+      <div class="browser-results-header">
+        <div class="browser-results-count" id="browser-results-count">Showing all 42 products</div>
+      </div>
+      <div class="browser-cat-pills" id="browser-cat-pills">
+        <div class="browser-cat-pill active" onclick="browserFilterCat('All', this)">All</div>
+        <div class="browser-cat-pill" onclick="browserFilterCat('Smartphones', this)">📱 Smartphones</div>
+        <div class="browser-cat-pill" onclick="browserFilterCat('Earphones', this)">🎧 Earphones</div>
+        <div class="browser-cat-pill" onclick="browserFilterCat('Kitchen', this)">🍳 Kitchen</div>
+        <div class="browser-cat-pill" onclick="browserFilterCat('Bags', this)">🎒 Bags</div>
+        <div class="browser-cat-pill" onclick="browserFilterCat('Smartwatches', this)">⌚ Smartwatches</div>
+        <div class="browser-cat-pill" onclick="browserFilterCat('Power Banks', this)">🔋 Power Banks</div>
+        <div class="browser-cat-pill" onclick="browserFilterCat('Study & Desk', this)">💡 Study & Desk</div>
+      </div>
+      <div class="browser-grid" id="browser-grid"></div>
+    </div>
+
+    <!-- Fullscreen product modal (inside browser) -->
+    <div class="browser-modal-overlay" id="browser-modal-overlay" onclick="closeBrowserModal(event)">
+      <div class="browser-modal" id="browser-modal" onclick="event.stopPropagation()">
+        <div class="bm-top">
+          <div class="bm-breadcrumb">Precisia Store › <span id="bm-cat-crumb">Category</span> › <span id="bm-name-crumb">Product</span></div>
+          <button class="bm-close" onclick="closeBrowserModalDirect()">✕</button>
+        </div>
+        <div class="bm-body">
+          <!-- Left -->
+          <div class="bm-left">
+            <div class="bm-img" id="bm-img">
+              <div class="bm-sim-label">Simulation</div>
+              <span id="bm-emoji">📱</span>
+            </div>
+            <div class="bm-thumbs" id="bm-thumbs"></div>
+          </div>
+          <!-- Right -->
+          <div class="bm-right">
+            <div class="bm-intent-bar">
+              <span class="bm-intent-label">Your Intent Score</span>
+              <span class="bm-intent-val" id="bm-intent-val">0 pts · 0%</span>
+            </div>
+            <div class="bm-cat-pill" id="bm-cat-pill">Category</div>
+            <div class="bm-name" id="bm-name">Product Name</div>
+            <div class="bm-rating">
+              <span class="bm-stars" id="bm-stars">★★★★☆</span>
+              <span id="bm-rating-text">4.2 (1,284)</span>
+              <span>·</span>
+              <span id="bm-sold">3,400+ sold</span>
+            </div>
+            <div class="bm-price-row">
+              <div class="bm-price" id="bm-price">₹0</div>
+              <div class="bm-mrp" id="bm-mrp">₹0</div>
+              <div class="bm-discount" id="bm-discount">0% off</div>
+            </div>
+            <div class="bm-tax">Inclusive of GST · Free delivery above ₹499 <em>(Simulated)</em></div>
+            <div class="bm-desc" id="bm-desc">Description</div>
+
+            <div class="bm-section-title">Key Specifications</div>
+            <div class="bm-specs" id="bm-specs"></div>
+
+            <div class="bm-section-title">Best Used For</div>
+            <div class="bm-usage" id="bm-usage"></div>
+
+            <div class="bm-section-title">Customer Reviews <em style="font-weight:400;text-transform:none;letter-spacing:0;opacity:0.5">(Simulated)</em></div>
+            <div class="bm-reviews" id="bm-reviews"></div>
+
+            <div class="bm-cta">
+              <button class="bm-cart-btn" id="bm-cart-btn" onclick="bmAddCart()">🛒 Add to Cart — +25 pts</button>
+              <button class="bm-view-full-btn" onclick="bmGoFullDetail()">⤢ Full Page</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /browser-body -->
+</div><!-- /browser-overlay -->
+
+</body>
+</html>
