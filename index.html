@@ -1,1 +1,53 @@
-<!DOCTYPE html>\n<html lang='en'>\n<head>\n    <meta charset='UTF-8'>\n    <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n    <title>Precisia AI Prototype</title>\n    <style>\n        /* Add your CSS here */\n        body {\n            font-family: Arial, sans-serif;\n            background-color: #f4f4f4;\n            margin: 0;\n            padding: 20px;\n        }\n        header {\n            background: #42a5f5;\n            color: white;\n            padding: 10px 0;\n            text-align: center;\n        }\n        #output {\n            margin-top: 20px;\n            background: white;\n            border-radius: 5px;\n            padding: 15px;\n            box-shadow: 0 2px 5px rgba(0,0,0,0.1);\n        }\n    </style>\n</head>\n<body>\n    <header>\n        <h1>Welcome to Precisia AI Prototype</h1>\n    </header>\n    <div id='output'>\n        <p>Your AI solution goes here!</p>\n    </div>\n    <script>\n        // Your JavaScript code here\n        console.log('Hello from Precisia AI Prototype!');\n    </script>\n</body>\n</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <title>Precisia AI Prototype</title>
+    <script src="script.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Precisia AI E-commerce Simulation</h1>
+        <nav>
+            <ul>
+                <li><a href="index.html">Home</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="cart.html">Cart</a></li>
+                <li><a href="export.html">Export CSV</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="products">
+            <h2>Available Products</h2>
+            <div class="product-browser">
+                <!-- Product cards go here -->
+                <!-- Example product card -->
+                <div class="product-card">
+                    <h3>Product 1</h3>
+                    <p>Description of Product 1.</p>
+                    <p>Price: $10.00</p>
+                    <button>Add to Cart</button>
+                </div>
+                <!-- Repeat for additional products -->
+            </div>
+        </section>
+        <section id="cart">
+            <h2>Your Cart</h2>
+            <div class="cart-items">
+                <!-- Cart items will be dynamically populated here -->
+            </div>
+            <button id="checkout">Checkout</button>
+        </section>
+        <section id="export">
+            <h2>Export Cart</h2>
+            <button id="export-csv">Export as CSV</button>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2026 Precisia AI. All rights reserved.</p>
+    </footer>
+</body>
+</html>
